@@ -3,14 +3,251 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My First Website</title>
+  <title>IGotNext — Find your next run</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Hello, World!</h1>
-  <p>This is my first website, built with Claude Code.</p>
-  <button id="greet-btn">Click me</button>
 
+  <header class="site-nav">
+    <div class="brand">🌲 IGotNext</div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#courts-section">Courts</a>
+      <a href="#map-section">Map</a>
+      <a href="#demo">Try the demo</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Find your next run.</h1>
+      <p>See where your friends are playing, discover nearby pickup games, and know what you're walking into before you show up.</p>
+      <button id="notify-btn" class="cta-large">Get early access</button>
+      <p id="notify-msg" class="hidden"></p>
+    </div>
+
+    <div class="phone-mockup" id="demo">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+
+        <div class="app-body">
+
+          <header class="appbar">
+            <div class="appbrand">🌲 IGotNext</div>
+            <div class="location">Bethesda, MD · <span id="open-count">3</span> runs open</div>
+          </header>
+
+          <nav class="tabs">
+            <button class="tab-btn active" data-tab="nearby">Nearby</button>
+            <button class="tab-btn" data-tab="myruns">My Runs</button>
+            <button class="tab-btn" data-tab="invites">Invites</button>
+            <button class="tab-btn" data-tab="chats">Chats</button>
+            <button class="tab-btn" data-tab="courts">Courts</button>
+          </nav>
+
+          <div class="app-content">
+
+            <!-- NEARBY -->
+            <section id="nearby" class="tab-panel active">
+              <h2 class="section-label">Open runs today</h2>
+
+              <div class="run-card" data-run="Pickup 5v5" data-meta="White Flint Park · 6:30 PM">
+                <div class="run-info">
+                  <div class="run-top">
+                    <h3>Pickup 5v5</h3>
+                    <span class="sport-tag basketball">Basketball</span>
+                  </div>
+                  <p class="run-meta">📍 White Flint Park &nbsp;·&nbsp; 🕒 6:30 PM</p>
+                  <div class="avatars">
+                    <span class="avatar a1">JN</span>
+                    <span class="avatar a2">DL</span>
+                    <span class="avatar a3">TR</span>
+                    <span class="joined-count">7/10 joined</span>
+                  </div>
+                </div>
+                <button class="join-btn">Join run</button>
+              </div>
+
+              <div class="run-card" data-run="Sunday League 6s" data-meta="Cabin John Park · 9:00 AM">
+                <div class="run-info">
+                  <div class="run-top">
+                    <h3>Sunday League 6s</h3>
+                    <span class="sport-tag soccer">Soccer</span>
+                  </div>
+                  <p class="run-meta">📍 Cabin John Park &nbsp;·&nbsp; 🕒 9:00 AM</p>
+                  <div class="avatars">
+                    <span class="avatar a4">AK</span>
+                    <span class="avatar a1">MF</span>
+                    <span class="joined-count">+4 &nbsp;·&nbsp; 6/6 joined</span>
+                  </div>
+                </div>
+                <button class="join-btn full" disabled>Full</button>
+              </div>
+
+              <div class="run-card" data-run="Morning 3s — casual" data-meta="Bethesda YMCA · 7:00 AM">
+                <div class="run-info">
+                  <div class="run-top">
+                    <h3>Morning 3s — casual</h3>
+                    <span class="sport-tag basketball">Basketball</span>
+                  </div>
+                  <p class="run-meta">📍 Bethesda YMCA &nbsp;·&nbsp; 🕒 7:00 AM</p>
+                  <div class="avatars">
+                    <span class="avatar a2">SW</span>
+                    <span class="joined-count">1/6 joined</span>
+                  </div>
+                </div>
+                <button class="join-btn">Join run</button>
+              </div>
+
+              <div class="invite-banner">
+                🔗 <strong>Invite friends to a run</strong>
+                <span>Share a link or send an IGotNext pass</span>
+              </div>
+            </section>
+
+            <!-- MY RUNS -->
+            <section id="myruns" class="tab-panel">
+              <h2 class="section-label">Your upcoming runs</h2>
+              <p id="myruns-empty" class="empty-state">You haven't joined any runs yet — join one from Nearby and it'll show up here.</p>
+              <div id="myruns-list"></div>
+            </section>
+
+            <!-- INVITES -->
+            <section id="invites" class="tab-panel">
+              <h2 class="section-label">Invites</h2>
+              <div class="run-card">
+                <div class="run-info">
+                  <div class="run-top">
+                    <h3>Friday Night Lights</h3>
+                    <span class="sport-tag basketball">Basketball</span>
+                  </div>
+                  <p class="run-meta">📍 Walt Whitman HS &nbsp;·&nbsp; 🕒 8:00 PM &nbsp;·&nbsp; Invited by Jordan</p>
+                </div>
+                <button class="join-btn">Accept</button>
+              </div>
+            </section>
+
+            <!-- CHATS -->
+            <section id="chats" class="tab-panel">
+              <h2 class="section-label">Run chats</h2>
+              <div class="chat-list">
+                <div class="chat-row" data-chat="pickup5v5chat">
+                  <div>
+                    <strong>Pickup 5v5</strong>
+                    <p class="chat-preview">DL: see you guys at 6:30</p>
+                  </div>
+                </div>
+                <div class="chat-row" data-chat="morning3schat">
+                  <div>
+                    <strong>Morning 3s</strong>
+                    <p class="chat-preview">SW: anyone else coming?</p>
+                  </div>
+                </div>
+              </div>
+
+              <h2 class="section-label">Private messages</h2>
+              <div class="chat-list">
+                <div class="chat-row" data-chat="dmjordan">
+                  <div>
+                    <strong>Jordan</strong>
+                    <p class="chat-preview">you up for tonight?</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- COURTS (real data from Supabase) -->
+            <section id="courts" class="tab-panel">
+              <h2 class="section-label">Montgomery County courts · <span id="courts-count">…</span></h2>
+              <div id="courts-list"><p class="empty-state">Loading courts…</p></div>
+            </section>
+
+          </div>
+        </div>
+
+        <div id="chat-thread" class="chat-thread hidden">
+          <div class="chat-thread-header">
+            <button id="chat-back" type="button">&larr;</button>
+            <strong id="chat-thread-title"></strong>
+          </div>
+          <div id="chat-messages" class="chat-messages"></div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" type="text" placeholder="Message" autocomplete="off">
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+      <p class="phone-caption">↑ a live preview of the app concept — try clicking around</p>
+    </div>
+  </section>
+
+  <!-- Real courts section -->
+  <section id="courts-section" class="courts-section">
+    <h2>Real courts in Montgomery County, MD</h2>
+    <p class="courts-intro">145 MNCPPC parks pulled from the county open data portal — basketball courts, fields, and tennis/pickleball. This is live from the database.</p>
+    <div id="courts-grid" class="courts-grid"><p class="courts-loading">Loading…</p></div>
+    <p class="courts-note">Showing courts with tagged sport assets. More coming — surface type, rim condition, lighting all crowdsourced once the app is live.</p>
+  </section>
+
+  <section id="features" class="features">
+    <h2>What it does</h2>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Friends &amp; Runs</h3>
+        <p>Add friends, mark yourself as running, and see where everyone's playing right now.</p>
+      </div>
+      <div class="card">
+        <h3>Discovery</h3>
+        <p>Find popular runs nearby, or games that just need a couple more players to be worth showing up for.</p>
+      </div>
+      <div class="card">
+        <h3>Court Profiles</h3>
+        <p>Surface material, backboard, net condition, lighting, and locked hours — know before you go.</p>
+      </div>
+      <div class="card">
+        <h3>Learns Over Time</h3>
+        <p>The more a court gets used, the better the app gets at predicting when people usually show up.</p>
+      </div>
+      <div class="card">
+        <h3>Group &amp; Private Chats</h3>
+        <p>Every run gets its own chat automatically, plus private messages for one-on-one planning.</p>
+      </div>
+      <div class="card">
+        <h3>Map View</h3>
+        <p>See nearby runs and courts laid out geographically, not just as a list.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="map-section" class="map-section">
+    <h2>See where games are happening</h2>
+    <iframe class="map-embed-full"
+      src="https://www.openstreetmap.org/export/embed.html?bbox=-77.1450%2C38.9700%2C-77.0700%2C39.0250&layer=mapnik"
+      loading="lazy"></iframe>
+    <p class="map-note">A real, live map — it isn't wired up to actual run/court locations yet. Pins for individual courts come once locations have real coordinates attached.</p>
+  </section>
+
+  <!-- Auth modal -->
+  <div id="auth-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <button id="modal-close" class="modal-close">&times;</button>
+      <h2 id="auth-title">Get early access</h2>
+      <p id="auth-subtitle">Sign up to be first on the list and save your favorite courts.</p>
+      <form id="auth-form">
+        <input type="email" id="auth-email" placeholder="Email address" required autocomplete="email">
+        <input type="password" id="auth-password" placeholder="Password (min 6 chars)" minlength="6" required autocomplete="current-password">
+        <button type="submit" id="auth-submit">Sign up</button>
+        <p id="auth-error" class="auth-error hidden"></p>
+      </form>
+      <p class="auth-toggle">Already have an account? <a href="#" id="auth-switch">Log in</a></p>
+    </div>
+  </div>
+
+  <footer>
+    <p>IGotNext — concept site. Courts data is real (145 Montgomery County parks from the county open data portal). Runs, chats, and social features are demo mockups.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
 </html>
