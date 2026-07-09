@@ -51,7 +51,7 @@ let userLon        = null;
 let mapInitialized = false;
 let activeFeed     = 'all';
 let activeVenues   = new Set(['basketball','tennis_pickleball','field']);
-let maxDistance    = 25; // miles
+let maxDistance    = 5; // miles — default tight radius
 let sportDropdownVal = '';
 
 // ============================================================
@@ -86,6 +86,7 @@ document.getElementById('distance-slider')?.addEventListener('input', e => {
   document.getElementById('distance-label').textContent = maxDistance + ' mi';
 });
 
+
 document.getElementById('apply-filter')?.addEventListener('click', () => {
   activeVenues = new Set(
     [...document.querySelectorAll('input[name="venue"]:checked')].map(el => el.value)
@@ -97,10 +98,10 @@ document.getElementById('apply-filter')?.addEventListener('click', () => {
 document.getElementById('reset-filter')?.addEventListener('click', () => {
   document.querySelectorAll('input[name="venue"]').forEach(el => el.checked = true);
   activeVenues = new Set(['basketball','tennis_pickleball','field']);
-  maxDistance  = 25;
+  maxDistance  = 5;
   const slider = document.getElementById('distance-slider');
-  if (slider) slider.value = 25;
-  document.getElementById('distance-label').textContent = '25 mi';
+  if (slider) slider.value = 5;
+  document.getElementById('distance-label').textContent = '5 mi';
   document.getElementById('filter-panel')?.classList.add('hidden');
   loadCourts();
 });
@@ -602,10 +603,15 @@ function renderCourts(locs) {
 
 function jumpToCreateRun(locId) {
   document.querySelector('[data-section="create"]')?.click();
-  setTimeout(() => {
-    const sel = document.getElementById('run-location');
-    if (sel) { sel.value = locId; updateSportHint(); }
-  }, 50);
+  setTimeout(async () => {
+    if (!locationDropdownList.length) await populateCreateForm();
+    const entry = locationDropdownList.find(l => l.id === locId);
+    if (entry) {
+      document.getElementById('run-location-input').value = entry.label;
+      document.getElementById('run-location').value       = locId;
+      updateSportHint();
+    }
+  }, 100);
 }
 
 // Geolocation
@@ -632,6 +638,49 @@ function detectLocation() {
     { timeout: 8000 }
   );
 }
+
+// ============================================================
+// Location search dropdown (Create Run)
+// ============================================================
+let locationDropdownList = []; // [{id, label}]
+
+function buildLocationDropdown(filter = '') {
+  const dd = document.getElementById('location-dropdown');
+  if (!dd) return;
+  const lower    = filter.toLowerCase();
+  const filtered = filter
+    ? locationDropdownList.filter(l => l.label.toLowerCase().includes(lower))
+    : locationDropdownList;
+
+  if (!filtered.length) { dd.classList.add('hidden'); return; }
+
+  dd.innerHTML = filtered.map(l =>
+    `<div class="sport-option" data-val="${l.id}" data-label="${escHtml(l.label)}">${escHtml(l.label)}</div>`
+  ).join('');
+  dd.classList.remove('hidden');
+
+  dd.querySelectorAll('.sport-option').forEach(opt => {
+    opt.addEventListener('mousedown', e => {
+      e.preventDefault();
+      document.getElementById('run-location-input').value = opt.dataset.label;
+      document.getElementById('run-location').value       = opt.dataset.val;
+      dd.classList.add('hidden');
+      updateSportHint();
+    });
+  });
+}
+
+document.getElementById('run-location-input')?.addEventListener('input', e => {
+  buildLocationDropdown(e.target.value);
+  // Clear hidden value if user is typing a new search
+  document.getElementById('run-location').value = '';
+});
+document.getElementById('run-location-input')?.addEventListener('focus', e => {
+  buildLocationDropdown(e.target.value);
+});
+document.getElementById('run-location-input')?.addEventListener('blur', () => {
+  setTimeout(() => document.getElementById('location-dropdown')?.classList.add('hidden'), 150);
+});
 
 // ============================================================
 // Sport search dropdown (Create Run)
@@ -676,10 +725,11 @@ document.getElementById('run-sport-input')?.addEventListener('blur', () => {
 });
 
 function updateSportHint() {
-  const sel   = document.getElementById('run-location');
+  const locId = document.getElementById('run-location')?.value;
   const hint  = document.getElementById('sport-hint');
-  if (!sel || !hint) return;
-  const loc   = allLocations.find(l => l.id === sel.value);
+  if (!hint) return;
+  if (!locId) { hint.classList.add('hidden'); return; }
+  const loc   = allLocations.find(l => l.id === locId);
   if (!loc) { hint.classList.add('hidden'); return; }
   const sports = [...new Set(loc.sports.flatMap(v => SPORTS_BY_VENUE[v] || []))];
   if (sports.length) {
@@ -693,26 +743,18 @@ function updateSportHint() {
 // ============================================================
 async function populateCreateForm() {
   if (!allLocations.length) await fetchLocations();
-  const sel = document.getElementById('run-location');
-  if (!sel) return;
-
-  if (sel.options.length <= 1) {
+  if (!locationDropdownList.length) {
     const sorted = userLat !== null
       ? [...allLocations].sort((a,b) => haversine(userLat,userLon,a.lat,a.lon) - haversine(userLat,userLon,b.lat,b.lon))
       : allLocations;
-    sorted.forEach(loc => {
-      const opt = document.createElement('option');
-      opt.value = loc.id;
-      const dist = userLat !== null ? ` (${haversine(userLat,userLon,loc.lat,loc.lon).toFixed(1)} mi)` : '';
-      opt.textContent = loc.name + (loc.city ? ` — ${loc.city}` : '') + dist;
-      sel.appendChild(opt);
+    locationDropdownList = sorted.map(loc => {
+      const dist = userLat !== null ? ` · ${haversine(userLat,userLon,loc.lat,loc.lon).toFixed(1)} mi` : '';
+      return { id: loc.id, label: loc.name + (loc.city ? ` — ${loc.city}` : '') + dist };
     });
   }
 
   const dateEl = document.getElementById('run-date');
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
-
-  sel.addEventListener('change', updateSportHint);
 }
 
 document.getElementById('create-run-form')?.addEventListener('submit', async e => {

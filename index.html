@@ -47,8 +47,8 @@
           </div>
         </div>
         <div class="filter-section" id="distance-filter-section">
-          <label class="filter-label">Max distance: <span id="distance-label">25 mi</span></label>
-          <input type="range" id="distance-slider" min="1" max="50" value="25" step="1" class="distance-slider">
+          <label class="filter-label">Max distance: <span id="distance-label">5 mi</span></label>
+          <input type="range" id="distance-slider" min="1" max="50" value="5" step="1" class="distance-slider">
         </div>
         <div class="filter-actions">
           <button class="submit-btn" id="apply-filter">Apply</button>
@@ -77,9 +77,11 @@
 
         <div class="form-group">
           <label>Where?</label>
-          <select id="run-location" required>
-            <option value="">Select a court...</option>
-          </select>
+          <div class="sport-search-wrap">
+            <input type="text" id="run-location-input" placeholder="Type to search or scroll..." autocomplete="off">
+            <div id="location-dropdown" class="sport-dropdown hidden"></div>
+          </div>
+          <input type="hidden" id="run-location">
         </div>
 
         <div class="form-group">
