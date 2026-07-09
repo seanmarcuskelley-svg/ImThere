@@ -10,7 +10,7 @@
 <body>
 
   <header class="site-header">
-    <div class="brand">🌲 ImThere</div>
+    <div class="brand">ImThere</div>
     <button id="auth-trigger" class="auth-btn">Sign in</button>
   </header>
 
@@ -33,9 +33,9 @@
 
       <div class="filter-row">
         <button class="filter-btn active" data-sport="all">All</button>
-        <button class="filter-btn" data-sport="basketball">🏀 Basketball</button>
-        <button class="filter-btn" data-sport="field">⚽ Field</button>
-        <button class="filter-btn" data-sport="tennis_pickleball">🎾 Tennis/Pickleball</button>
+        <button class="filter-btn" data-sport="basketball">Basketball</button>
+        <button class="filter-btn" data-sport="field">Field</button>
+        <button class="filter-btn" data-sport="tennis_pickleball">Tennis / Pickleball</button>
       </div>
 
       <button class="create-run-banner" id="goto-create">
@@ -65,12 +65,10 @@
         </div>
 
         <div class="form-group">
-          <label>Sport</label>
-          <div class="radio-row">
-            <label class="radio-opt"><input type="radio" name="run-sport" value="basketball" required> 🏀 Basketball</label>
-            <label class="radio-opt"><input type="radio" name="run-sport" value="field"> ⚽ Field</label>
-            <label class="radio-opt"><input type="radio" name="run-sport" value="tennis_pickleball"> 🎾 Tennis/Pickleball</label>
-          </div>
+          <label>Sport / Activity</label>
+          <input type="text" id="run-sport-input" list="sport-list" placeholder="Search: Soccer, Basketball, Yoga..." autocomplete="off" required>
+          <datalist id="sport-list"></datalist>
+          <p id="sport-hint" class="field-note" style="display:none"></p>
         </div>
 
         <div class="form-row-2">
@@ -99,9 +97,9 @@
         <div class="form-group">
           <label>Who can join?</label>
           <div class="radio-row">
-            <label class="radio-opt"><input type="radio" name="privacy" value="public" checked> 🌎 Public</label>
-            <label class="radio-opt"><input type="radio" name="privacy" value="friends"> 👥 Friends</label>
-            <label class="radio-opt"><input type="radio" name="privacy" value="private"> 🔒 Private</label>
+            <label class="radio-opt"><input type="radio" name="privacy" value="public" checked> Public</label>
+            <label class="radio-opt"><input type="radio" name="privacy" value="friends"> Friends</label>
+            <label class="radio-opt"><input type="radio" name="privacy" value="private"> Private</label>
           </div>
         </div>
 
@@ -129,7 +127,7 @@
     <section id="profile" class="section">
       <!-- Not signed in -->
       <div id="profile-gate" class="gate-view">
-        <div class="gate-icon">🌲</div>
+        <div class="gate-icon"></div>
         <h2>Sign in to see your profile</h2>
         <p>Create an account to follow players, post runs, and build your court rep.</p>
         <button class="submit-btn" id="profile-signin-btn">Sign in / Sign up</button>
@@ -229,14 +227,12 @@
 
           <div class="store-badges">
             <div class="store-badge">
-              <span class="badge-icon">🍎</span>
               <div>
                 <small>Coming to</small>
                 <strong>App Store</strong>
               </div>
             </div>
             <div class="store-badge">
-              <span class="badge-icon">▶</span>
               <div>
                 <small>Coming to</small>
                 <strong>Google Play</strong>
@@ -251,11 +247,11 @@
           <p id="waitlist-msg" class="form-msg hidden">You're on the list ✓</p>
 
           <div class="feature-pills">
-            <span>🏀 Court profiles</span>
-            <span>📍 Live runs map</span>
-            <span>👥 Friends feed</span>
-            <span>💬 Run chats</span>
-            <span>🎬 Court clips</span>
+            <span>Court profiles</span>
+            <span>Live runs map</span>
+            <span>Friends feed</span>
+            <span>Run chats</span>
+            <span>Court clips</span>
           </div>
         </div>
 
@@ -264,7 +260,7 @@
             <div class="phone-notch"></div>
             <div class="app-body">
               <header class="appbar">
-                <div class="appbrand">🌲 ImThere</div>
+                <div class="appbrand">ImThere</div>
                 <div class="location">Bethesda, MD · <span>3</span> runs open</div>
               </header>
               <nav class="tabs">
@@ -279,7 +275,7 @@
                   <div class="run-card" data-run="Pickup 5v5" data-meta="White Flint Park · 6:30 PM">
                     <div class="run-info">
                       <div class="run-top"><h3>Pickup 5v5</h3><span class="sport-tag basketball">Basketball</span></div>
-                      <p class="run-meta">📍 White Flint Park &nbsp;·&nbsp; 🕒 6:30 PM</p>
+                      <p class="run-meta">White Flint Park · 6:30 PM</p>
                       <div class="avatars">
                         <span class="avatar a1">JN</span><span class="avatar a2">DL</span><span class="avatar a3">TR</span>
                         <span class="joined-count">7/10 joined</span>
@@ -290,7 +286,7 @@
                   <div class="run-card" data-run="Sunday 6s" data-meta="Cabin John Park · 9:00 AM">
                     <div class="run-info">
                       <div class="run-top"><h3>Sunday 6s</h3><span class="sport-tag soccer">Soccer</span></div>
-                      <p class="run-meta">📍 Cabin John Park &nbsp;·&nbsp; 🕒 9:00 AM</p>
+                      <p class="run-meta">Cabin John Park · 9:00 AM</p>
                       <div class="avatars">
                         <span class="avatar a4">AK</span><span class="avatar a1">MF</span>
                         <span class="joined-count">6/6 · Full</span>
@@ -301,12 +297,12 @@
                   <div class="run-card" data-run="Morning 3s" data-meta="Bethesda YMCA · 7:00 AM">
                     <div class="run-info">
                       <div class="run-top"><h3>Morning 3s</h3><span class="sport-tag basketball">Basketball</span></div>
-                      <p class="run-meta">📍 Bethesda YMCA &nbsp;·&nbsp; 🕒 7:00 AM</p>
+                      <p class="run-meta">Bethesda YMCA · 7:00 AM</p>
                       <div class="avatars"><span class="avatar a2">SW</span><span class="joined-count">1/6 joined</span></div>
                     </div>
                     <button class="join-btn">Join</button>
                   </div>
-                  <div class="invite-banner">🔗 <strong>Invite friends to a run</strong><span>Share a link or send an ImThere pass</span></div>
+                  <div class="invite-banner"><strong>Invite friends to a run</strong><span>Share a link or send an ImThere pass</span></div>
                 </section>
                 <section id="myruns" class="tab-panel">
                   <h2 class="section-label">Your upcoming runs</h2>
@@ -318,7 +314,7 @@
                   <div class="run-card">
                     <div class="run-info">
                       <div class="run-top"><h3>Friday Night Lights</h3><span class="sport-tag basketball">Basketball</span></div>
-                      <p class="run-meta">📍 Walt Whitman HS &nbsp;·&nbsp; 🕒 8:00 PM &nbsp;·&nbsp; Jordan</p>
+                      <p class="run-meta">Walt Whitman HS · 8:00 PM · Jordan</p>
                     </div>
                     <button class="join-btn">Accept</button>
                   </div>
