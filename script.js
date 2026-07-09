@@ -92,7 +92,7 @@ document.getElementById('apply-filter')?.addEventListener('click', () => {
     [...document.querySelectorAll('input[name="venue"]:checked')].map(el => el.value)
   );
   document.getElementById('filter-panel')?.classList.add('hidden');
-  loadCourts();
+  loadCourts(true); // apply distance + venue filters
 });
 
 document.getElementById('reset-filter')?.addEventListener('click', () => {
@@ -103,7 +103,7 @@ document.getElementById('reset-filter')?.addEventListener('click', () => {
   if (slider) slider.value = 5;
   document.getElementById('distance-label').textContent = '5 mi';
   document.getElementById('filter-panel')?.classList.add('hidden');
-  loadCourts();
+  loadCourts(false); // back to smart top-10 view
 });
 
 // ============================================================
@@ -124,9 +124,16 @@ async function handleAuth(user) {
   if (user) {
     btn.textContent = user.email.split('@')[0];
     await ensureProfile(user);
+    // Reload court counts now that we know who the user is
+    courtCountsLoaded = false;
+    courtRunCounts    = {};
+    loadCourts(false);
   } else {
     currentProfile = null;
     btn.textContent = 'Sign in';
+    courtCountsLoaded = false;
+    courtRunCounts    = {};
+    loadCourts(false);
   }
   refreshProfileView();
 }
@@ -549,32 +556,79 @@ async function fetchLocations() {
   }));
 }
 
-async function loadCourts() {
-  if (!allLocations.length) await fetchLocations();
+// courtRunCounts[locId] = { total, personal }
+let courtRunCounts = {};
+let courtCountsLoaded = false;
 
-  let sorted = [...allLocations];
+async function fetchCourtCounts() {
+  if (courtCountsLoaded || !sb) return;
+  courtCountsLoaded = true;
 
-  // Sort by distance if we have location
-  if (userLat !== null) {
-    sorted.sort((a,b) => haversine(userLat,userLon,a.lat,a.lon) - haversine(userLat,userLon,b.lat,b.lon));
-    // Apply max distance filter
-    sorted = sorted.filter(loc => haversine(userLat,userLon,loc.lat,loc.lon) <= maxDistance);
+  // Total community runs per location
+  const { data: allRuns } = await sb.from('run').select('location_id');
+  (allRuns || []).forEach(r => {
+    if (!courtRunCounts[r.location_id]) courtRunCounts[r.location_id] = { total: 0, personal: 0 };
+    courtRunCounts[r.location_id].total++;
+  });
+
+  // Personal runs for logged-in user
+  if (currentProfile) {
+    const { data: myRuns } = await sb.from('run')
+      .select('location_id').eq('creator_id', currentProfile.id);
+    (myRuns || []).forEach(r => {
+      if (!courtRunCounts[r.location_id]) courtRunCounts[r.location_id] = { total: 0, personal: 0 };
+      courtRunCounts[r.location_id].personal++;
+    });
   }
-
-  // Filter by selected venue types
-  sorted = sorted.filter(loc => loc.sports.some(s => activeVenues.has(s)));
-
-  renderCourts(sorted);
 }
 
-function renderCourts(locs) {
+function scoreCourt(loc) {
+  const counts   = courtRunCounts[loc.id] || { total: 0, personal: 0 };
+  const dist     = (userLat !== null) ? haversine(userLat, userLon, loc.lat, loc.lon) : 10;
+  // Personal history is the strongest signal, then community activity, then proximity
+  const personal = counts.personal * 15;
+  const community= counts.total    * 3;
+  const proximity= Math.max(0, 30 - dist); // closer = higher score, up to 30 pts
+  return personal + community + proximity;
+}
+
+async function loadCourts(applyFilter = false) {
+  if (!allLocations.length) await fetchLocations();
+  await fetchCourtCounts();
+
+  let pool = [...allLocations];
+
+  if (applyFilter) {
+    // Filter panel is active — apply distance + venue constraints
+    if (userLat !== null) {
+      pool = pool.filter(loc => haversine(userLat, userLon, loc.lat, loc.lon) <= maxDistance);
+    }
+    pool = pool.filter(loc => loc.sports.some(s => activeVenues.has(s)));
+    pool.sort((a, b) => scoreCourt(b) - scoreCourt(a));
+  } else {
+    // Default smart view — top 10 by score, no hard distance cutoff
+    pool = pool.filter(loc => loc.sports.some(s => activeVenues.has(s)));
+    pool.sort((a, b) => scoreCourt(b) - scoreCourt(a));
+    pool = pool.slice(0, 10);
+  }
+
+  renderCourts(pool, applyFilter);
+}
+
+function renderCourts(locs, filtered = false) {
   const list = document.getElementById('courts-list');
   if (!list) return;
   if (!locs.length) {
-    list.innerHTML = '<p class="empty-state">No courts match your filters.</p>';
+    list.innerHTML = '<p class="empty-state">No courts match your filters. Try expanding the distance.</p>';
     return;
   }
-  list.innerHTML = '';
+
+  // Label above the list
+  const labelText = filtered
+    ? `${locs.length} court${locs.length !== 1 ? 's' : ''} matching your filters`
+    : `Top ${locs.length} courts for you`;
+  list.innerHTML = `<p class="courts-list-label">${labelText}</p>`;
+
   locs.forEach(loc => {
     const dist = userLat !== null
       ? `<span class="court-distance">${haversine(userLat,userLon,loc.lat,loc.lon).toFixed(1)} mi</span>`

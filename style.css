@@ -206,6 +206,15 @@ body {
 /* ── Courts list ────────────────────────────────────────── */
 #courts-list { display: flex; flex-direction: column; gap: 12px; }
 
+.courts-list-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
 .court-card {
   background: var(--card);
   border: 1px solid var(--border);
