@@ -101,12 +101,36 @@
     </div>
   </section>
 
-  <!-- ===== CREATE RUN ===== -->
+  <!-- ===== CREATE ===== -->
   <section id="create" class="section">
-    <div class="section-top">
-      <h1>Create a Run</h1>
-      <p>Post where you're playing so people can show up.</p>
+
+    <!-- Choice screen -->
+    <div id="create-choice">
+      <div class="section-top">
+        <h1>Create</h1>
+        <p>Post a game or add a court to the map.</p>
+      </div>
+      <div class="create-choice-cards">
+        <button class="create-choice-card" id="create-choice-run">
+          <span class="create-choice-icon">🏀</span>
+          <strong>Post a Run</strong>
+          <small>Let people know where you're playing</small>
+        </button>
+        <button class="create-choice-card" id="create-choice-loc">
+          <span class="create-choice-icon">📍</span>
+          <strong>Add a Location</strong>
+          <small>Put a new court or field on the map</small>
+        </button>
+      </div>
     </div>
+
+    <!-- Run form (hidden until chosen) -->
+    <div id="create-run-view" class="hidden">
+      <div class="section-top create-run-top">
+        <button class="create-back-btn" id="create-back-btn">← Back</button>
+        <h1>Post a Run</h1>
+        <p>Post where you're playing so people can show up.</p>
+      </div>
 
     <form id="create-run-form" class="form-card">
       <div class="form-group">
@@ -174,6 +198,8 @@
       <button type="submit" class="submit-btn" id="create-run-submit">Post Run</button>
       <p id="create-run-msg" class="form-msg hidden"></p>
     </form>
+    </div><!-- /create-run-view -->
+
   </section>
 
   <!-- ===== MAP ===== -->

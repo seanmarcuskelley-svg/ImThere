@@ -424,6 +424,28 @@ img { display: block; object-fit: cover; }
 .create-run-banner strong { display: block; font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
 .create-run-banner small  { font-size: .78rem; opacity: .85; }
 
+/* ── Create choice cards ────────────────────────────────── */
+.create-choice-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;
+}
+.create-choice-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: var(--r-lg); padding: 22px 12px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s;
+  text-align: center; color: var(--text-1);
+}
+.create-choice-card:hover { border-color: var(--brand); box-shadow: var(--sh-md); }
+.create-choice-icon { font-size: 2rem; line-height: 1; margin-bottom: 2px; }
+.create-choice-card strong { font-size: .95rem; font-weight: 700; }
+.create-choice-card small { font-size: .75rem; color: var(--text-3); line-height: 1.3; }
+.create-back-btn {
+  background: none; border: none; color: var(--brand);
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+  padding: 0; margin-bottom: 6px; display: inline-block;
+}
+.create-run-top { display: flex; flex-direction: column; align-items: flex-start; }
+
 /* ── Map — full-screen breakout ─────────────────────────── */
 #map.section.active {
   position: fixed;

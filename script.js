@@ -62,13 +62,38 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     document.getElementById(btn.dataset.section)?.classList.add('active');
     if (btn.dataset.section === 'map')     { initMap(); setTimeout(()=>leafletMap?.invalidateSize(),50); }
     if (btn.dataset.section === 'profile') refreshProfileView();
-    if (btn.dataset.section === 'create')  populateCreateForm();
+    if (btn.dataset.section === 'create')  { populateCreateForm(); showCreateChoice(); }
     if (btn.dataset.section === 'dms')     loadDmList();
   });
 });
 
 document.getElementById('goto-create')?.addEventListener('click', () => {
   document.querySelector('[data-section="create"]')?.click();
+  setTimeout(() => showCreateRun(), 50);
+});
+
+// Create tab — choice / run / location views
+function showCreateRun() {
+  document.getElementById('create-choice')?.classList.add('hidden');
+  document.getElementById('create-run-view')?.classList.remove('hidden');
+}
+function showCreateChoice() {
+  document.getElementById('create-run-view')?.classList.add('hidden');
+  document.getElementById('create-choice')?.classList.remove('hidden');
+}
+
+document.getElementById('create-back-btn')?.addEventListener('click', showCreateChoice);
+
+document.getElementById('create-choice-run')?.addEventListener('click', showCreateRun);
+
+document.getElementById('create-choice-loc')?.addEventListener('click', () => {
+  if (!currentProfile) { openAuthModal(); return; }
+  document.getElementById('add-location-modal')?.classList.remove('hidden');
+  document.getElementById('add-loc-name').value = '';
+  document.getElementById('add-loc-photo-preview').innerHTML = '';
+  document.getElementById('add-loc-form').reset();
+  document.getElementById('add-loc-msg').classList.add('hidden');
+  document.getElementById('add-loc-coords').textContent = '';
 });
 
 // Courts view-mode tabs (All / Favorites)
@@ -626,16 +651,44 @@ async function loadUserFavorites() {
 
 async function toggleFavorite(locId, btn) {
   if (!currentProfile) { openAuthModal(); return; }
-  const isFav = userFavorites.has(locId);
-  btn.classList.toggle('fav-active', !isFav);
-  if (isFav) {
+  const wasFav = userFavorites.has(locId);
+
+  // Optimistic UI update
+  if (wasFav) {
     userFavorites.delete(locId);
-    await sb.from('court_favorite').delete().eq('user_id', currentProfile.id).eq('location_id', locId);
+    btn.classList.remove('fav-active');
+    btn.querySelector('svg')?.setAttribute('fill', 'none');
   } else {
     userFavorites.add(locId);
-    await sb.from('court_favorite').insert({ user_id: currentProfile.id, location_id: locId });
+    btn.classList.add('fav-active');
+    btn.querySelector('svg')?.setAttribute('fill', 'currentColor');
   }
-  // If in favorites view, refresh
+
+  let error;
+  if (wasFav) {
+    ({ error } = await sb.from('court_favorite').delete()
+      .eq('user_id', currentProfile.id).eq('location_id', locId));
+  } else {
+    ({ error } = await sb.from('court_favorite').insert(
+      { user_id: currentProfile.id, location_id: locId }
+    ));
+  }
+
+  if (error) {
+    // Rollback
+    if (wasFav) {
+      userFavorites.add(locId);
+      btn.classList.add('fav-active');
+      btn.querySelector('svg')?.setAttribute('fill', 'currentColor');
+    } else {
+      userFavorites.delete(locId);
+      btn.classList.remove('fav-active');
+      btn.querySelector('svg')?.setAttribute('fill', 'none');
+    }
+    showBanner(error.message || 'Could not save favorite', true);
+    return;
+  }
+
   if (courtsViewMode === 'favorites') loadCourts(false);
 }
 
@@ -1621,6 +1674,7 @@ document.getElementById('add-loc-form')?.addEventListener('submit', async e => {
 
 function jumpToCreateRun(locId) {
   document.querySelector('[data-section="create"]')?.click();
+  showCreateRun();
   setTimeout(async()=>{
     if (!locationDropdownList.length) await populateCreateForm();
     const entry=locationDropdownList.find(l=>l.id===locId);
@@ -1762,6 +1816,8 @@ document.getElementById('create-run-form')?.addEventListener('submit',async e=>{
     document.querySelector('input[name="privacy"][value="public"]').checked=true;
     document.getElementById('sport-hint')?.classList.add('hidden');
     courtCountsLoaded=false; courtRunCounts={};
+    // Return to choice screen after success
+    setTimeout(() => showCreateChoice(), 1500);
   }
 });
 
