@@ -668,44 +668,63 @@ function starsHtml(avg, count, interactive = false, locId = '') {
 }
 
 async function openCourtRatingPanel(loc, panel) {
-  const uid  = currentProfile?.id;
+  const uid = currentProfile?.id;
   let myRating = null;
   if (uid && sb) {
     const { data } = await sb.from('court_rating').select('*').eq('user_id', uid).eq('location_id', loc.id).single();
     myRating = data;
   }
 
-  const CONDITIONS = {
-    surface:   { label: 'Surface', opts: ['Great shape','Good','Fair','Rough','Cracked/damaged'] },
-    hoops:     { label: 'Hoops',   opts: ['Has nets','No nets','Bent rims','Double rims'] },
-    lighting:  { label: 'Lighting',opts: ['Well lit','Partial lighting','No lighting'] },
-    parking:   { label: 'Parking', opts: ['Free & easy','Street parking','Limited/difficult'] },
-    amenities: { label: 'Extras',  opts: ['Bathrooms nearby','Water fountain','Seating/bleachers','Shade'] },
-  };
+  // Use shortened ID safe for input names (no hyphens)
+  const lid = loc.id.replace(/-/g,'');
 
-  const condHtml = Object.entries(CONDITIONS).map(([key, {label, opts}]) => `
-    <div class="cond-group">
-      <div class="cond-label">${label}</div>
+  const CONDITIONS = [
+    { key:'surface',    label:'Surface',        type:'radio',    opts:['Great shape','Good','Fair','Rough','Cracked/damaged'] },
+    { key:'hoops',      label:'Hoops',          type:'radio',    opts:['Has hoops','No hoops','Bent rims','Double rims'] },
+    { key:'nets',       label:'Nets',           type:'radio',    opts:['New nets','Damaged nets','No nets'] },
+    { key:'lighting',   label:'Lighting',       type:'radio',    opts:['Well lit','Partial lighting','No lighting'] },
+    { key:'lights_off', label:'Lights off at',  type:'time' },
+    { key:'parking',    label:'Parking',        type:'checkbox', opts:['Free parking','Street parking','Paid parking','Limited spots','No parking nearby'] },
+    { key:'extras',     label:'Extras',         type:'checkbox', opts:['Bathrooms nearby','Water fountain','Seating/bleachers','Shade','Fenced in','Scoreboard','Covered area'] },
+  ];
+
+  const condHtml = CONDITIONS.map(cond => {
+    if (cond.type === 'time') {
+      const val = myRating?.conditions?.lights_off || '';
+      return `<div class="cond-group" id="lights-off-group-${lid}" style="display:none">
+        <div class="cond-label">${cond.label} <span class="optional">(optional)</span></div>
+        <input type="time" class="cond-time-input" id="cond-lights_off-${lid}" value="${val}">
+      </div>`;
+    }
+    const isCheckbox = cond.type === 'checkbox';
+    const prev = myRating?.conditions?.[cond.key];
+    return `<div class="cond-group">
+      <div class="cond-label">${cond.label}</div>
       <div class="cond-chips">
-        ${opts.map(o => `<label class="cond-chip"><input type="radio" name="cond-${key}" value="${escHtml(o)}" ${myRating?.conditions?.[key]===o?'checked':''}><span>${escHtml(o)}</span></label>`).join('')}
+        ${cond.opts.map(o => {
+          const isChecked = isCheckbox
+            ? Array.isArray(prev) && prev.includes(o)
+            : prev === o;
+          return `<label class="cond-chip"><input type="${isCheckbox?'checkbox':'radio'}" name="cond-${cond.key}-${lid}" value="${escHtml(o)}" ${isChecked?'checked':''}><span>${escHtml(o)}</span></label>`;
+        }).join('')}
       </div>
-    </div>`).join('');
-
-  const existing = myRating ? `<p class="rating-existing">Your current rating: ${myRating.rating}★</p>` : '';
-
-  panel.innerHTML += `
-    <div class="rating-section" id="rating-${loc.id}">
-      <h5>Rate this court</h5>
-      ${starsHtml(courtRatings[loc.id]?.avg, courtRatings[loc.id]?.count)}
-      ${existing}
-      ${starsHtml(0,0,true,loc.id)}
-      <div class="cond-form">${condHtml}</div>
-      <textarea class="rating-review" id="review-${loc.id}" placeholder="Optional: describe what you saw (hours, conditions, run quality)..." rows="2"></textarea>
-      <button class="submit-btn" style="margin-top:8px;font-size:.82rem;padding:9px" id="rate-submit-${loc.id}">Submit Rating</button>
-      <p class="form-msg hidden" id="rate-msg-${loc.id}"></p>
     </div>`;
+  }).join('');
 
-  // Wire interactive stars
+  const existing = myRating ? `<p class="rating-existing">Your rating: ${myRating.rating}★ — update below</p>` : '';
+
+  panel.innerHTML = `<div class="rating-section" id="rating-${loc.id}">
+    <h5>Rate this court</h5>
+    ${starsHtml(courtRatings[loc.id]?.avg, courtRatings[loc.id]?.count)}
+    ${existing}
+    ${starsHtml(0,0,true,loc.id)}
+    <div class="cond-form">${condHtml}</div>
+    <textarea class="rating-review" id="review-${loc.id}" placeholder="Optional: describe what you saw..." rows="2">${myRating?.review||''}</textarea>
+    <button class="submit-btn" style="margin-top:10px;font-size:.84rem;padding:10px" id="rate-submit-${loc.id}">Submit Rating</button>
+    <p class="form-msg hidden" id="rate-msg-${loc.id}"></p>
+  </div>`;
+
+  // Wire stars
   const starRow = document.getElementById(`stars-${loc.id}`);
   let selectedStar = myRating?.rating || 0;
   if (starRow) {
@@ -721,15 +740,35 @@ async function openCourtRatingPanel(loc, panel) {
     });
   }
 
+  // Show/hide lights-off time
+  panel.querySelectorAll(`input[name="cond-lighting-${lid}"]`).forEach(radio => {
+    radio.addEventListener('change', () => {
+      const grp = document.getElementById(`lights-off-group-${lid}`);
+      if (grp) grp.style.display = (radio.checked && radio.value !== 'No lighting') ? 'block' : 'none';
+    });
+    if (radio.checked && radio.value !== 'No lighting') {
+      const grp = document.getElementById(`lights-off-group-${lid}`);
+      if (grp) grp.style.display = 'block';
+    }
+  });
+
   document.getElementById(`rate-submit-${loc.id}`)?.addEventListener('click', async () => {
     const msgEl = document.getElementById(`rate-msg-${loc.id}`);
     if (!selectedStar) { showMsg(msgEl, 'Tap stars to rate.', true); return; }
     if (!currentProfile) { openAuthModal(); return; }
     const review = document.getElementById(`review-${loc.id}`)?.value.trim() || null;
     const conditions = {};
-    Object.keys(CONDITIONS).forEach(key => {
-      const checked = document.querySelector(`input[name="cond-${key}"]:checked`);
-      if (checked) conditions[key] = checked.value;
+    CONDITIONS.forEach(cond => {
+      if (cond.type === 'time') {
+        const val = document.getElementById(`cond-lights_off-${lid}`)?.value;
+        if (val) conditions[cond.key] = val;
+      } else if (cond.type === 'checkbox') {
+        const checked = [...panel.querySelectorAll(`input[name="cond-${cond.key}-${lid}"]:checked`)].map(el => el.value);
+        if (checked.length) conditions[cond.key] = checked;
+      } else {
+        const checked = panel.querySelector(`input[name="cond-${cond.key}-${lid}"]:checked`);
+        if (checked) conditions[cond.key] = checked.value;
+      }
     });
     const { error } = await sb.from('court_rating').upsert({
       user_id: currentProfile.id, location_id: loc.id,
@@ -1170,9 +1209,18 @@ async function loadCdRuns(loc) {
 
   const now = new Date().toISOString();
   const { data: runs } = await sb.from('run')
-    .select('id,sport,scheduled_at,going_count,needed_count,notes,privacy,creator_id,profile!run_creator_id_fkey(username,display_name,avatar_url)')
+    .select('id,sport,scheduled_at,going_count,needed_count,notes,privacy,creator_id')
     .eq('location_id', loc.id).gte('scheduled_at', now)
     .order('scheduled_at').limit(30);
+
+  // Fetch creator profiles separately to avoid FK hint issues
+  const creatorIds = [...new Set((runs||[]).map(r=>r.creator_id).filter(Boolean))];
+  const creatorMap = {};
+  if (creatorIds.length && sb) {
+    const { data: profs } = await sb.from('profile').select('id,username,display_name,avatar_url').in('id', creatorIds);
+    (profs||[]).forEach(p => { creatorMap[p.id] = p; });
+  }
+  (runs||[]).forEach(r => { r.profile = creatorMap[r.creator_id] || {}; });
 
   if (!runs?.length) {
     el.innerHTML = `<div class="cd-empty-note">No upcoming runs. <button class="link-btn" onclick="document.getElementById('cd-create-run').click()">Post one!</button></div>`;
@@ -1290,6 +1338,57 @@ async function loadCdRuns(loc) {
       if (btn && btn.classList.contains('going')) rsvpToRun(runId, btn, parseInt(sel.value));
     });
   });
+
+  // Wire comment toggles
+  el.querySelectorAll('.comments-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const runId   = btn.dataset.run;
+      const section = document.getElementById(`rci-${runId}`);
+      if (!section) return;
+      const isHidden = section.classList.contains('hidden');
+      section.classList.toggle('hidden', !isHidden);
+      if (isHidden) loadRunCommentsInline(runId);
+    });
+  });
+  el.querySelectorAll('.rci-send').forEach(btn => {
+    const runId = btn.dataset.run;
+    btn.addEventListener('click', () => postCommentInline(runId));
+    document.getElementById(`rci-input-${runId}`)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') postCommentInline(runId);
+    });
+  });
+}
+
+async function loadRunCommentsInline(runId) {
+  const listEl = document.getElementById(`rcl-${runId}`);
+  if (!listEl || !sb) return;
+  listEl.innerHTML = '<p style="font-size:.75rem;color:var(--text-3)">Loading...</p>';
+  const { data } = await sb.from('run_comment')
+    .select('id,content,created_at,profile(username,display_name,avatar_url)')
+    .eq('run_id', runId).order('created_at').limit(30);
+  if (!data?.length) { listEl.innerHTML = '<p style="font-size:.75rem;color:var(--text-3)">No comments yet.</p>'; return; }
+  listEl.innerHTML = data.map(c => {
+    const prof = c.profile||{}; const name = prof.display_name||prof.username||'Player';
+    return `<div class="comment-item">
+      ${avatarHtml(prof,26)}
+      <div class="comment-body">
+        <span class="comment-author">${escHtml(name)}</span>
+        <span class="comment-when"> · ${timeAgo(new Date(c.created_at))}</span>
+        <p class="comment-text">${escHtml(c.content)}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function postCommentInline(runId) {
+  if (!currentProfile) { openAuthModal(); return; }
+  const input = document.getElementById(`rci-input-${runId}`);
+  const text  = input?.value.trim();
+  if (!text || !sb) return;
+  input.value = '';
+  const { error } = await sb.from('run_comment').insert({ run_id: runId, author_id: currentProfile.id, content: text });
+  if (error) { showBanner(error.message, true); return; }
+  loadRunCommentsInline(runId);
 }
 
 function renderRunCard(run, rsvps, isPrivate) {
@@ -1331,7 +1430,7 @@ function renderRunCard(run, rsvps, isPrivate) {
     ${rsvps.length ? `<div class="rsvp-avatar-stack">${avatarStack}${rsvps.length>5?`<div class="rsvp-avatar initials">+${rsvps.length-5}</div>`:''}</div>` : ''}
     ${rsvpRows ? `<div class="rsvp-list">${rsvpRows}</div>` : ''}
     <div class="rsvp-bar">
-      <button class="rsvp-btn${isGoing?' going':''}" data-run="${run.id}">${isGoing?'✓ Going':'I\'m going'}</button>
+      <button class="rsvp-btn${isGoing?' going':''}" data-run="${run.id}">${isGoing?'✓ Going':"I'm going"}</button>
       ${isGoing ? `<select class="rsvp-guests" data-run="${run.id}">
         <option value="0"${!myRsvp?.guests?' selected':''}>Just me</option>
         <option value="1"${myRsvp?.guests===1?' selected':''}>+1</option>
@@ -1339,33 +1438,43 @@ function renderRunCard(run, rsvps, isPrivate) {
         <option value="3"${myRsvp?.guests===3?' selected':''}>+3</option>
       </select>` : ''}
     </div>
+    <div class="run-comments-row">
+      <button class="comments-toggle-btn" data-run="${run.id}">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Comments
+      </button>
+    </div>
+    <div class="rci hidden" id="rci-${run.id}">
+      <div class="comment-list" id="rcl-${run.id}"></div>
+      <div class="rci-form">
+        <input type="text" id="rci-input-${run.id}" placeholder="Add a comment..." class="rci-input">
+        <button class="rci-send" data-run="${run.id}">
+          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
   </div>`;
 }
 
 async function rsvpToRun(runId, btn, guests = 0) {
   if (!currentProfile) { openAuthModal(); return; }
+  if (!sb) return;
   const isGoing = btn.classList.contains('going');
+  btn.disabled = true;
 
   if (isGoing) {
-    // Cancel RSVP
-    await sb.from('run_rsvp').delete().eq('run_id', runId).eq('user_id', currentProfile.id);
-    btn.classList.remove('going'); btn.textContent = "I'm going";
-    // Remove guest selector
-    btn.nextElementSibling?.remove();
+    const { error } = await sb.from('run_rsvp').delete().eq('run_id', runId).eq('user_id', currentProfile.id);
+    if (error) { showBanner(error.message, true); btn.disabled = false; return; }
   } else {
-    // Add RSVP
-    await sb.from('run_rsvp').upsert({ run_id: runId, user_id: currentProfile.id, guests, status: 'going' }, { onConflict: 'run_id,user_id' });
-    btn.classList.add('going'); btn.textContent = '✓ Going';
-    // Add guest selector if not present
-    if (!btn.nextElementSibling) {
-      const sel = document.createElement('select');
-      sel.className = 'rsvp-guests'; sel.dataset.run = runId;
-      sel.innerHTML = '<option value="0">Just me</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option>';
-      btn.after(sel);
-      sel.addEventListener('change', () => rsvpToRun(runId, btn, parseInt(sel.value)));
-    }
+    const { error } = await sb.from('run_rsvp').upsert(
+      { run_id: runId, user_id: currentProfile.id, guests, status: 'going' },
+      { onConflict: 'run_id,user_id' }
+    );
+    if (error) { showBanner(error.message, true); btn.disabled = false; return; }
   }
-  // Refresh runs
+
+  btn.disabled = false;
+  // Refresh the runs section so RSVP list updates live
   if (activeDetailLoc) loadCdRuns(activeDetailLoc);
 }
 
