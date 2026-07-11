@@ -685,6 +685,78 @@
   </div>
 </div>
 
+<!-- ===== COURT DETAIL PAGE ===== -->
+<div id="court-detail" class="court-detail hidden">
+
+  <div class="court-detail-header">
+    <button class="cd-back" id="cd-back">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span class="cd-header-name" id="cd-name">Court</span>
+    <button class="fav-btn" id="cd-fav">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+    </button>
+  </div>
+
+  <div class="court-detail-body" id="cd-body">
+
+    <!-- Photo strip -->
+    <div class="cd-photos" id="cd-photos">
+      <div class="cd-photos-empty">No photos yet — be the first to add one</div>
+    </div>
+
+    <!-- Info -->
+    <div class="cd-info-block" id="cd-info"></div>
+
+    <!-- Hours -->
+    <div class="cd-section">
+      <div class="cd-section-title">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Hours
+      </div>
+      <div id="cd-hours" class="cd-section-body">
+        <span class="cd-hours-placeholder">Hours not yet confirmed — community can add these</span>
+      </div>
+    </div>
+
+    <!-- Conditions -->
+    <div class="cd-section" id="cd-conditions-section">
+      <div class="cd-section-title">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Conditions
+      </div>
+      <div id="cd-conditions" class="cd-section-body">Loading...</div>
+    </div>
+
+    <!-- Runs -->
+    <div class="cd-section">
+      <div class="cd-section-title">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Upcoming Runs
+      </div>
+      <div id="cd-runs" class="cd-section-body">Loading...</div>
+    </div>
+
+    <div style="height:80px"></div><!-- spacer for action bar -->
+  </div>
+
+  <!-- Action bar -->
+  <div class="cd-actions">
+    <button class="cd-action-btn primary" id="cd-create-run">+ Run Here</button>
+    <button class="cd-action-btn" id="cd-add-photo">
+      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Photo
+    </button>
+    <button class="cd-action-btn" id="cd-rate-btn">
+      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Rate
+    </button>
+  </div>
+
+  <!-- Hidden file input for adding court photos from detail page -->
+  <input type="file" id="cd-photo-input" accept="image/*" style="display:none">
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="script.js"></script>

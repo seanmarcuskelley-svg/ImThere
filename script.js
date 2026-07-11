@@ -871,7 +871,7 @@ function renderCourts(locs, filtered=false, isFavView=false) {
       <div class="court-card-main">
         <div class="court-card-top">
           <div>
-            <h4>${escHtml(loc.name)}</h4>
+            <h4 class="court-name-link" data-loc="${loc.id}">${escHtml(loc.name)}</h4>
             <p class="court-city">${loc.city||'Montgomery County'}, MD</p>
             ${ratingHtml}
           </div>
@@ -902,10 +902,11 @@ function renderCourts(locs, filtered=false, isFavView=false) {
       <div class="court-expand" id="expand-${loc.id}"></div>`;
 
     card.querySelector('[data-action="create"]').addEventListener('click', ()=>jumpToCreateRun(loc.id));
-    card.querySelector('[data-action="runs"]').addEventListener('click', ()=>toggleCourtExpand(loc,'runs'));
+    card.querySelector('[data-action="runs"]').addEventListener('click', ()=>openCourtDetail(loc.id));
     card.querySelector('[data-action="rate"]').addEventListener('click', ()=>toggleCourtExpand(loc,'rate'));
-    card.querySelector('[data-action="photos"]').addEventListener('click', ()=>toggleCourtExpand(loc,'photos'));
+    card.querySelector('[data-action="photos"]').addEventListener('click', ()=>openCourtDetail(loc.id));
     card.querySelector('.fav-btn').addEventListener('click', e=>toggleFavorite(loc.id, e.currentTarget));
+    card.querySelector('.court-name-link').addEventListener('click', ()=>openCourtDetail(loc.id));
     list.appendChild(card);
   });
 }
@@ -1034,6 +1035,354 @@ async function uploadCourtPhoto(e,loc) {
   const panel=document.getElementById(`expand-${loc.id}`);
   if (panel) loadCourtPhotos(loc,panel);
 }
+
+// ── Court Detail Page ─────────────────────────────────────
+let activeDetailLoc = null;
+
+function openCourtDetail(locId) {
+  if (!allLocations.length) { loadCourts(false).then(()=>openCourtDetail(locId)); return; }
+  const loc = allLocations.find(l => l.id === locId);
+  if (!loc) return;
+  activeDetailLoc = loc;
+
+  document.getElementById('cd-name').textContent = loc.name;
+  const favBtn = document.getElementById('cd-fav');
+  const isFav  = userFavorites.has(locId);
+  favBtn.classList.toggle('fav-active', isFav);
+  favBtn.querySelector('svg').setAttribute('fill', isFav ? 'currentColor' : 'none');
+  document.getElementById('cd-body').scrollTop = 0;
+  document.getElementById('court-detail').classList.remove('hidden');
+
+  loadCdPhotos(loc);
+  renderCdInfo(loc);
+  loadCdConditions(loc);
+  loadCdRuns(loc);
+}
+
+document.getElementById('cd-back')?.addEventListener('click', () => {
+  document.getElementById('court-detail').classList.add('hidden');
+  activeDetailLoc = null;
+});
+document.getElementById('cd-fav')?.addEventListener('click', e => {
+  if (!activeDetailLoc) return;
+  toggleFavorite(activeDetailLoc.id, e.currentTarget);
+  const isFav = userFavorites.has(activeDetailLoc.id);
+  e.currentTarget.querySelector('svg').setAttribute('fill', isFav ? 'currentColor' : 'none');
+});
+document.getElementById('cd-create-run')?.addEventListener('click', () => {
+  document.getElementById('court-detail').classList.add('hidden');
+  if (activeDetailLoc) jumpToCreateRun(activeDetailLoc.id);
+});
+document.getElementById('cd-rate-btn')?.addEventListener('click', () => {
+  if (!activeDetailLoc) return;
+  if (!currentProfile) { openAuthModal(); return; }
+  const runsEl = document.getElementById('cd-runs');
+  // Scroll to rating section or open inline
+  const existing = document.getElementById(`rating-${activeDetailLoc.id}`);
+  if (existing) { existing.scrollIntoView({behavior:'smooth'}); return; }
+  // Append rating panel below runs
+  const panel = document.createElement('div');
+  panel.id = `cd-rate-panel`;
+  runsEl.parentElement.appendChild(panel);
+  openCourtRatingPanel(activeDetailLoc, panel);
+  panel.scrollIntoView({behavior:'smooth'});
+});
+document.getElementById('cd-add-photo')?.addEventListener('click', () => {
+  if (!currentProfile) { openAuthModal(); return; }
+  document.getElementById('cd-photo-input').click();
+});
+document.getElementById('cd-photo-input')?.addEventListener('change', async e => {
+  if (!activeDetailLoc) return;
+  const fakePanel = { innerHTML: '' };
+  await uploadCourtPhoto(e, activeDetailLoc);
+  loadCdPhotos(activeDetailLoc);
+});
+
+async function loadCdPhotos(loc) {
+  const el = document.getElementById('cd-photos');
+  if (!el || !sb) return;
+  const { data } = await sb.from('court_photo').select('url,caption').eq('location_id', loc.id).order('created_at',{ascending:false}).limit(20);
+  if (!data?.length) {
+    el.innerHTML = '<div class="cd-photos-empty">No photos yet — tap Photo below to add the first one</div>';
+    return;
+  }
+  el.innerHTML = data.map(p =>
+    `<div class="cd-photo-item"><img src="${escHtml(p.url)}" alt="${escHtml(p.caption||loc.name)}" loading="lazy"></div>`
+  ).join('');
+}
+
+function renderCdInfo(loc) {
+  const el = document.getElementById('cd-info');
+  if (!el) return;
+  const dist = userLat !== null ? `<span class="cd-distance">${haversine(userLat,userLon,loc.lat,loc.lon).toFixed(1)} mi away</span>` : '';
+  const tags = (loc.sports||[]).map(s => { const m=VENUE_META[s]||{label:s,cls:''}; return `<span class="venue-tag ${m.cls}">${m.label}</span>`; }).join('');
+  const rObj = courtRatings[loc.id];
+  const ratingHtml = rObj
+    ? `<div class="cd-rating-row">${starsHtml(rObj.avg, rObj.count)}</div>`
+    : '<div class="cd-rating-row no-rating">No ratings yet — be the first</div>';
+
+  el.innerHTML = `
+    <div class="cd-info-row">
+      <div>
+        <h2 class="cd-info-name">${escHtml(loc.name)}</h2>
+        <p class="cd-info-city">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${loc.city||'Montgomery County'}, MD ${loc.zip?'· '+loc.zip:''}
+        </p>
+        ${ratingHtml}
+        ${dist}
+      </div>
+      <div class="cd-venue-tags">${tags}</div>
+    </div>`;
+}
+
+async function loadCdConditions(loc) {
+  const el = document.getElementById('cd-conditions');
+  if (!el || !sb) return;
+  const { data } = await sb.from('court_rating').select('conditions,rating').eq('location_id', loc.id);
+  if (!data?.length) { el.innerHTML = '<span class="cd-empty-note">No conditions reported yet. Rate this court to help others!</span>'; return; }
+
+  // Aggregate conditions by key
+  const agg = {};
+  data.forEach(r => {
+    if (!r.conditions) return;
+    Object.entries(r.conditions).forEach(([k, v]) => {
+      if (!agg[k]) agg[k] = {};
+      if (Array.isArray(v)) { v.forEach(item => { agg[k][item] = (agg[k][item]||0)+1; }); }
+      else { agg[k][v] = (agg[k][v]||0)+1; }
+    });
+  });
+
+  const KEY_LABELS = { surface:'Surface', hoops:'Hoops', lighting:'Lighting', parking:'Parking', extras:'Extras' };
+  const condHtml = Object.entries(agg).map(([key, vals]) => {
+    const top = Object.entries(vals).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const chips = top.map(([val,cnt]) => `<span class="cond-result-chip">${escHtml(val)} <em>${cnt}</em></span>`).join('');
+    return `<div class="cd-cond-row"><span class="cd-cond-key">${KEY_LABELS[key]||key}</span><div class="cond-result-chips">${chips}</div></div>`;
+  }).join('');
+
+  el.innerHTML = condHtml || '<span class="cd-empty-note">No conditions data yet.</span>';
+}
+
+async function loadCdRuns(loc) {
+  const el = document.getElementById('cd-runs');
+  if (!el || !sb) return;
+  el.innerHTML = '<p class="loading-msg">Loading runs...</p>';
+
+  const now = new Date().toISOString();
+  const { data: runs } = await sb.from('run')
+    .select('id,sport,scheduled_at,going_count,needed_count,notes,privacy,creator_id,profile!run_creator_id_fkey(username,display_name,avatar_url)')
+    .eq('location_id', loc.id).gte('scheduled_at', now)
+    .order('scheduled_at').limit(30);
+
+  if (!runs?.length) {
+    el.innerHTML = `<div class="cd-empty-note">No upcoming runs. <button class="link-btn" onclick="document.getElementById('cd-create-run').click()">Post one!</button></div>`;
+    return;
+  }
+
+  // Load RSVPs
+  const runIds = runs.map(r => r.id);
+  const { data: rsvps } = await sb.from('run_rsvp')
+    .select('run_id,guests,user_id,profile(username,display_name,avatar_url)')
+    .in('run_id', runIds);
+
+  const rsvpMap = {};
+  (rsvps||[]).forEach(r => {
+    if (!rsvpMap[r.run_id]) rsvpMap[r.run_id] = [];
+    rsvpMap[r.run_id].push(r);
+  });
+
+  // Filter by privacy
+  const visible = runs.filter(r => {
+    if (r.privacy === 'public') return true;
+    if (!currentProfile) return false;
+    if (r.creator_id === currentProfile.id) return true;
+    return (rsvpMap[r.id]||[]).some(rv => rv.user_id === currentProfile.id);
+  });
+
+  if (!visible.length) { el.innerHTML='<div class="cd-empty-note">No public runs right now.</div>'; return; }
+
+  // Group public runs into 45-min windows; private/friends stay separate
+  const publicRuns  = visible.filter(r => r.privacy === 'public');
+  const privateRuns = visible.filter(r => r.privacy !== 'public');
+  const timeGroups  = groupRunsByTime(publicRuns, 45);
+
+  el.innerHTML = '';
+
+  // Render public groups
+  timeGroups.forEach(group => {
+    const d      = new Date(group.time);
+    const ds     = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const ts     = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    const allRsvp= group.runs.flatMap(r => rsvpMap[r.id]||[]);
+    const totalGoers = group.runs.reduce((s,r) => {
+      const rsvpCount = (rsvpMap[r.id]||[]).reduce((a,rv) => a+1+(rv.guests||0),0);
+      return s + Math.max(r.going_count||0, rsvpCount);
+    }, 0);
+    const needed = group.runs[0]?.needed_count;
+    const sports = [...new Set(group.runs.map(r=>r.sport))].join(' / ');
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'run-time-group';
+    groupEl.innerHTML = `
+      <div class="run-time-header" data-open="false">
+        <div class="run-time-left">
+          <div class="run-time-label">${ds} · ${ts}</div>
+          <div class="run-time-meta">${escHtml(sports)} · ${totalGoers}${needed?'/'+needed:''} going</div>
+        </div>
+        <svg class="run-time-chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="run-time-body hidden">
+        ${group.runs.map(r => renderRunCard(r, rsvpMap[r.id]||[], false)).join('')}
+      </div>`;
+
+    groupEl.querySelector('.run-time-header').addEventListener('click', e => {
+      const header = e.currentTarget;
+      const body   = groupEl.querySelector('.run-time-body');
+      const isOpen = header.dataset.open === 'true';
+      header.dataset.open = String(!isOpen);
+      body.classList.toggle('hidden', isOpen);
+      groupEl.querySelector('.run-time-chevron').style.transform = isOpen ? '' : 'rotate(180deg)';
+    });
+
+    el.appendChild(groupEl);
+  });
+
+  // Render private/friends runs
+  privateRuns.forEach(r => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'run-time-group';
+    const d  = new Date(r.scheduled_at);
+    const ds = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const ts = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    groupEl.innerHTML = `
+      <div class="run-time-header" data-open="false">
+        <div class="run-time-left">
+          <div class="run-time-label">
+            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="vertical-align:middle;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            ${ds} · ${ts}
+          </div>
+          <div class="run-time-meta">${escHtml(r.sport)} · ${r.privacy === 'friends' ? 'Friends only' : 'Private'}</div>
+        </div>
+        <svg class="run-time-chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="run-time-body hidden">
+        ${renderRunCard(r, rsvpMap[r.id]||[], true)}
+      </div>`;
+    groupEl.querySelector('.run-time-header').addEventListener('click', e => {
+      const header = e.currentTarget;
+      const body   = groupEl.querySelector('.run-time-body');
+      const isOpen = header.dataset.open === 'true';
+      header.dataset.open = String(!isOpen);
+      body.classList.toggle('hidden', isOpen);
+      groupEl.querySelector('.run-time-chevron').style.transform = isOpen ? '' : 'rotate(180deg)';
+    });
+    el.appendChild(groupEl);
+  });
+
+  // Wire RSVP buttons
+  el.querySelectorAll('.rsvp-btn').forEach(btn => {
+    btn.addEventListener('click', () => rsvpToRun(btn.dataset.run, btn));
+  });
+  el.querySelectorAll('.rsvp-guests').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const runId = sel.dataset.run;
+      const btn   = el.querySelector(`.rsvp-btn[data-run="${runId}"]`);
+      if (btn && btn.classList.contains('going')) rsvpToRun(runId, btn, parseInt(sel.value));
+    });
+  });
+}
+
+function renderRunCard(run, rsvps, isPrivate) {
+  const creator = run.profile||{};
+  const totalRsvp = rsvps.reduce((s,rv) => s+1+(rv.guests||0), 0);
+  const going  = Math.max(run.going_count||0, totalRsvp);
+  const needed = run.needed_count ? `/${run.needed_count}` : '';
+  const isGoing = currentProfile && rsvps.some(rv => rv.user_id === currentProfile.id);
+
+  // Avatar stack
+  const avatarStack = rsvps.slice(0,5).map(rv => {
+    const p = rv.profile||{}; const name = p.display_name||p.username||'?';
+    return p.avatar_url
+      ? `<img class="rsvp-avatar" src="${escHtml(p.avatar_url)}" title="${escHtml(name)}" alt="${escHtml(name)}">`
+      : `<div class="rsvp-avatar initials">${(name[0]||'?').toUpperCase()}</div>`;
+  }).join('');
+
+  const rsvpRows = rsvps.map(rv => {
+    const p = rv.profile||{}; const name = p.display_name||p.username||'Player';
+    const guests = rv.guests ? `<span class="rsvp-guests-badge">+${rv.guests}</span>` : '';
+    const isMe   = currentProfile && rv.user_id === currentProfile.id;
+    return `<div class="rsvp-person${isMe?' me':''}">${avatarHtml(p,24)}<span>${escHtml(name)}${isMe?' (you)':''}</span>${guests}</div>`;
+  }).join('');
+
+  const myRsvp = rsvps.find(rv => currentProfile && rv.user_id === currentProfile.id);
+
+  return `<div class="run-detail-card${isPrivate?' private-run':''}">
+    <div class="run-detail-top">
+      <div>
+        <span class="run-sport-badge">${escHtml(run.sport)}</span>
+        ${run.notes?`<p class="run-notes">${escHtml(run.notes)}</p>`:''}
+      </div>
+      <div class="run-going-count">${going}${needed} <span>going</span></div>
+    </div>
+    <div class="run-organizer">
+      ${avatarHtml(creator,20)}
+      <span>Organized by <strong>${escHtml(creator.display_name||creator.username||'Player')}</strong></span>
+    </div>
+    ${rsvps.length ? `<div class="rsvp-avatar-stack">${avatarStack}${rsvps.length>5?`<div class="rsvp-avatar initials">+${rsvps.length-5}</div>`:''}</div>` : ''}
+    ${rsvpRows ? `<div class="rsvp-list">${rsvpRows}</div>` : ''}
+    <div class="rsvp-bar">
+      <button class="rsvp-btn${isGoing?' going':''}" data-run="${run.id}">${isGoing?'✓ Going':'I\'m going'}</button>
+      ${isGoing ? `<select class="rsvp-guests" data-run="${run.id}">
+        <option value="0"${!myRsvp?.guests?' selected':''}>Just me</option>
+        <option value="1"${myRsvp?.guests===1?' selected':''}>+1</option>
+        <option value="2"${myRsvp?.guests===2?' selected':''}>+2</option>
+        <option value="3"${myRsvp?.guests===3?' selected':''}>+3</option>
+      </select>` : ''}
+    </div>
+  </div>`;
+}
+
+async function rsvpToRun(runId, btn, guests = 0) {
+  if (!currentProfile) { openAuthModal(); return; }
+  const isGoing = btn.classList.contains('going');
+
+  if (isGoing) {
+    // Cancel RSVP
+    await sb.from('run_rsvp').delete().eq('run_id', runId).eq('user_id', currentProfile.id);
+    btn.classList.remove('going'); btn.textContent = "I'm going";
+    // Remove guest selector
+    btn.nextElementSibling?.remove();
+  } else {
+    // Add RSVP
+    await sb.from('run_rsvp').upsert({ run_id: runId, user_id: currentProfile.id, guests, status: 'going' }, { onConflict: 'run_id,user_id' });
+    btn.classList.add('going'); btn.textContent = '✓ Going';
+    // Add guest selector if not present
+    if (!btn.nextElementSibling) {
+      const sel = document.createElement('select');
+      sel.className = 'rsvp-guests'; sel.dataset.run = runId;
+      sel.innerHTML = '<option value="0">Just me</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option>';
+      btn.after(sel);
+      sel.addEventListener('change', () => rsvpToRun(runId, btn, parseInt(sel.value)));
+    }
+  }
+  // Refresh runs
+  if (activeDetailLoc) loadCdRuns(activeDetailLoc);
+}
+
+function groupRunsByTime(runs, windowMin = 45) {
+  const groups = [];
+  const windowMs = windowMin * 60 * 1000;
+  runs.forEach(run => {
+    const t = new Date(run.scheduled_at).getTime();
+    const group = groups.find(g => Math.abs(g.time - t) <= windowMs);
+    if (group) { group.runs.push(run); }
+    else { groups.push({ time: t, runs: [run] }); }
+  });
+  return groups.sort((a, b) => a.time - b.time);
+}
+
+// Make court cards clickable → detail page
+// (called in renderCourts below via data-loc attribute on h4)
 
 // ── Add Location ─────────────────────────────────────────
 let addLocPhotos = []; // File[]
@@ -1340,15 +1689,19 @@ async function initMap() {
     const marker=L.marker([loc.lat,loc.lon],{icon}).addTo(map);
     const venueLabels=(loc.sports||[]).map(s=>VENUE_META[s]?.label||s).join(', ')||'Court';
     marker.bindPopup(`
-      <div style="min-width:190px">
+      <div style="min-width:200px">
         <div class="map-popup-title">${escHtml(loc.name)}</div>
         <div class="map-popup-sub">${loc.city||'Montgomery County'}, MD · ${venueLabels}</div>
-        <div class="map-popup-runs">${runs>0?runs+` upcoming run${runs>1?'s':''}`:'No runs yet'}</div>
-        <button class="map-popup-btn" onclick="window.__jumpCreate('${loc.id}')">+ Create Run Here</button>
-      </div>`,{maxWidth:240});
+        <div class="map-popup-runs">${runs>0?`<strong>${runs}</strong> upcoming run${runs>1?'s':''}`:'No runs yet'}</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="map-popup-btn" style="flex:1" onclick="window.__openDetail('${loc.id}')">View Court</button>
+          <button class="map-popup-btn" style="flex:1;background:var(--surface);color:var(--brand);border:1.5px solid var(--brand)" onclick="window.__jumpCreate('${loc.id}')">+ Run</button>
+        </div>
+      </div>`,{maxWidth:250});
   });
 
   window.__jumpCreate=locId=>jumpToCreateRun(locId);
+  window.__openDetail=locId=>openCourtDetail(locId);
 
   if (userLat!==null) {
     const youIcon=L.divIcon({
