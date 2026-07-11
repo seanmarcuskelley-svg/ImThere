@@ -82,6 +82,15 @@
       </div>
     </div>
 
+    <!-- Courts view tabs -->
+    <div class="court-view-tabs">
+      <button class="court-tab active" data-mode="all">All Courts</button>
+      <button class="court-tab" data-mode="favorites">
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="currentColor" stroke-width="0"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        Favorites
+      </button>
+    </div>
+
     <button class="create-run-banner" id="goto-create">
       <strong>+ Create a Run</strong>
       <small>Let people know you're playing</small>
@@ -595,8 +604,80 @@
         <div id="add-loc-photo-preview" class="add-loc-photo-strip"></div>
       </div>
       <div class="form-group">
+        <label>Court / Field conditions</label>
+        <div class="cond-group">
+          <div class="cond-label">Surface</div>
+          <div class="cond-chips">
+            <label class="cond-chip"><input type="radio" name="sub-surface" value="Great shape"><span>Great shape</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-surface" value="Good"><span>Good</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-surface" value="Fair"><span>Fair</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-surface" value="Rough"><span>Rough</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-surface" value="Cracked/damaged"><span>Cracked/damaged</span></label>
+          </div>
+        </div>
+        <div class="cond-group" id="sub-hoops-group">
+          <div class="cond-label">Hoops <span class="optional">(if courts)</span></div>
+          <div class="cond-chips">
+            <label class="cond-chip"><input type="radio" name="sub-hoops" value="Has nets"><span>Has nets</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-hoops" value="No nets"><span>No nets</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-hoops" value="Bent rims"><span>Bent rims</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-hoops" value="Double rims"><span>Double rims</span></label>
+          </div>
+        </div>
+        <div class="cond-group">
+          <div class="cond-label">Lighting</div>
+          <div class="cond-chips">
+            <label class="cond-chip"><input type="radio" name="sub-lighting" value="Well lit"><span>Well lit</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-lighting" value="Partial"><span>Partial</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-lighting" value="No lighting"><span>No lighting</span></label>
+          </div>
+        </div>
+        <div class="cond-group">
+          <div class="cond-label">Parking</div>
+          <div class="cond-chips">
+            <label class="cond-chip"><input type="radio" name="sub-parking" value="Free &amp; easy"><span>Free &amp; easy</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-parking" value="Street parking"><span>Street parking</span></label>
+            <label class="cond-chip"><input type="radio" name="sub-parking" value="Limited/difficult"><span>Limited/difficult</span></label>
+          </div>
+        </div>
+        <div class="cond-group">
+          <div class="cond-label">Extras</div>
+          <div class="cond-chips multi">
+            <label class="cond-chip"><input type="checkbox" name="sub-extras" value="Bathrooms nearby"><span>Bathrooms</span></label>
+            <label class="cond-chip"><input type="checkbox" name="sub-extras" value="Water fountain"><span>Water fountain</span></label>
+            <label class="cond-chip"><input type="checkbox" name="sub-extras" value="Seating"><span>Seating</span></label>
+            <label class="cond-chip"><input type="checkbox" name="sub-extras" value="Shade"><span>Shade</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>When do good runs happen here? <span class="optional">(optional — helps others find pickup games)</span></label>
+        <div class="good-times-wrap">
+          <div class="good-times-label">Days</div>
+          <div class="good-times-days">
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Mon"><span>Mon</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Tue"><span>Tue</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Wed"><span>Wed</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Thu"><span>Thu</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Fri"><span>Fri</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Sat"><span>Sat</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-days" value="Sun"><span>Sun</span></label>
+          </div>
+          <div class="good-times-label" style="margin-top:8px">Times</div>
+          <div class="good-times-days">
+            <label class="day-chip"><input type="checkbox" name="sub-times" value="Morning (6–10am)"><span>Morning</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-times" value="Midday (10am–2pm)"><span>Midday</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-times" value="Afternoon (2–6pm)"><span>Afternoon</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-times" value="Evening (6–10pm)"><span>Evening</span></label>
+            <label class="day-chip"><input type="checkbox" name="sub-times" value="Night (after 10pm)"><span>Night</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label>Notes <span class="optional">(optional)</span></label>
-        <textarea id="add-loc-notes" rows="2" placeholder="Parking info, hours, any other details..."></textarea>
+        <textarea id="add-loc-notes" rows="2" placeholder="Anything else people should know..."></textarea>
       </div>
       <p id="add-loc-msg" class="form-msg hidden"></p>
       <button type="submit" class="submit-btn" id="add-loc-submit">Submit Location</button>

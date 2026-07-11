@@ -38,16 +38,20 @@ let currentProfile = null;
 let allLocations   = [];
 let userLat = null, userLon = null;
 let mapInitialized = false;
+let leafletMap     = null;
 let activeFeed     = 'all';
 let activeVenues   = new Set(['basketball','tennis_pickleball','field']);
 let maxDistance    = 5;
 let locationDropdownList = [];
 let courtRunCounts = {};
 let courtCountsLoaded = false;
-let activePostImage = null; // File object
-let activeDmUser   = null; // { id, name, avatar }
-let dmPolling      = null;
-let profileGridMode = 'posts';
+let activePostImage  = null;
+let activeDmUser     = null;
+let dmPolling        = null;
+let profileGridMode  = 'posts';
+let userFavorites    = new Set(); // Set of location IDs
+let courtsViewMode   = 'all';    // 'all' | 'favorites'
+let courtRatings     = {};       // { locId: { avg, count } }
 
 // ── Navigation ───────────────────────────────────────────
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -56,7 +60,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.section)?.classList.add('active');
-    if (btn.dataset.section === 'map')     initMap();
+    if (btn.dataset.section === 'map')     { initMap(); setTimeout(()=>leafletMap?.invalidateSize(),50); }
     if (btn.dataset.section === 'profile') refreshProfileView();
     if (btn.dataset.section === 'create')  populateCreateForm();
     if (btn.dataset.section === 'dms')     loadDmList();
@@ -65,6 +69,17 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 document.getElementById('goto-create')?.addEventListener('click', () => {
   document.querySelector('[data-section="create"]')?.click();
+});
+
+// Courts view-mode tabs (All / Favorites)
+document.querySelectorAll('.court-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.court-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    courtsViewMode = btn.dataset.mode;
+    if (courtsViewMode === 'favorites' && !currentProfile) { openAuthModal(); return; }
+    loadCourts(false);
+  });
 });
 
 // ── Filter panel ─────────────────────────────────────────
@@ -108,11 +123,14 @@ async function handleAuth(user) {
     await ensureProfile(user);
     btn.textContent = currentProfile?.username || user.email.split('@')[0];
     courtCountsLoaded = false; courtRunCounts = {};
+    await loadUserFavorites();
+    await loadCourtAverageRatings();
     loadCourts(false);
   } else {
     currentProfile = null;
     btn.textContent = 'Sign in';
     courtCountsLoaded = false; courtRunCounts = {};
+    userFavorites = new Set(); courtRatings = {};
     loadCourts(false);
   }
   refreshProfileView();
@@ -598,6 +616,173 @@ async function searchPlayers() {
   el.querySelectorAll('.follow-btn').forEach(btn=>btn.addEventListener('click',()=>followUser(btn.dataset.uid,btn)));
 }
 
+// ── Favorites ────────────────────────────────────────────
+async function loadUserFavorites() {
+  userFavorites = new Set();
+  if (!currentProfile || !sb) return;
+  const { data } = await sb.from('court_favorite').select('location_id').eq('user_id', currentProfile.id);
+  (data || []).forEach(r => userFavorites.add(r.location_id));
+}
+
+async function toggleFavorite(locId, btn) {
+  if (!currentProfile) { openAuthModal(); return; }
+  const isFav = userFavorites.has(locId);
+  btn.classList.toggle('fav-active', !isFav);
+  if (isFav) {
+    userFavorites.delete(locId);
+    await sb.from('court_favorite').delete().eq('user_id', currentProfile.id).eq('location_id', locId);
+  } else {
+    userFavorites.add(locId);
+    await sb.from('court_favorite').insert({ user_id: currentProfile.id, location_id: locId });
+  }
+  // If in favorites view, refresh
+  if (courtsViewMode === 'favorites') loadCourts(false);
+}
+
+// ── Ratings ───────────────────────────────────────────────
+async function loadCourtAverageRatings() {
+  courtRatings = {};
+  if (!sb) return;
+  const { data } = await sb.from('court_rating').select('location_id,rating');
+  (data || []).forEach(r => {
+    if (!courtRatings[r.location_id]) courtRatings[r.location_id] = { sum: 0, count: 0 };
+    courtRatings[r.location_id].sum   += r.rating;
+    courtRatings[r.location_id].count += 1;
+  });
+  Object.keys(courtRatings).forEach(id => {
+    const obj = courtRatings[id];
+    obj.avg = obj.sum / obj.count;
+  });
+}
+
+function starsHtml(avg, count, interactive = false, locId = '') {
+  if (interactive) {
+    return `<div class="star-row interactive" id="stars-${locId}">
+      ${[1,2,3,4,5].map(n => `<button class="star-btn" data-n="${n}" data-loc="${locId}" aria-label="${n} star">★</button>`).join('')}
+    </div>`;
+  }
+  if (!avg) return '<span class="no-rating">No ratings yet</span>';
+  const full  = Math.round(avg);
+  const stars = [1,2,3,4,5].map(n => `<span class="${n<=full?'star-on':'star-off'}">★</span>`).join('');
+  return `<div class="star-row">${stars}<span class="rating-num">${avg.toFixed(1)} (${count})</span></div>`;
+}
+
+async function openCourtRatingPanel(loc, panel) {
+  const uid  = currentProfile?.id;
+  let myRating = null;
+  if (uid && sb) {
+    const { data } = await sb.from('court_rating').select('*').eq('user_id', uid).eq('location_id', loc.id).single();
+    myRating = data;
+  }
+
+  const CONDITIONS = {
+    surface:   { label: 'Surface', opts: ['Great shape','Good','Fair','Rough','Cracked/damaged'] },
+    hoops:     { label: 'Hoops',   opts: ['Has nets','No nets','Bent rims','Double rims'] },
+    lighting:  { label: 'Lighting',opts: ['Well lit','Partial lighting','No lighting'] },
+    parking:   { label: 'Parking', opts: ['Free & easy','Street parking','Limited/difficult'] },
+    amenities: { label: 'Extras',  opts: ['Bathrooms nearby','Water fountain','Seating/bleachers','Shade'] },
+  };
+
+  const condHtml = Object.entries(CONDITIONS).map(([key, {label, opts}]) => `
+    <div class="cond-group">
+      <div class="cond-label">${label}</div>
+      <div class="cond-chips">
+        ${opts.map(o => `<label class="cond-chip"><input type="radio" name="cond-${key}" value="${escHtml(o)}" ${myRating?.conditions?.[key]===o?'checked':''}><span>${escHtml(o)}</span></label>`).join('')}
+      </div>
+    </div>`).join('');
+
+  const existing = myRating ? `<p class="rating-existing">Your current rating: ${myRating.rating}★</p>` : '';
+
+  panel.innerHTML += `
+    <div class="rating-section" id="rating-${loc.id}">
+      <h5>Rate this court</h5>
+      ${starsHtml(courtRatings[loc.id]?.avg, courtRatings[loc.id]?.count)}
+      ${existing}
+      ${starsHtml(0,0,true,loc.id)}
+      <div class="cond-form">${condHtml}</div>
+      <textarea class="rating-review" id="review-${loc.id}" placeholder="Optional: describe what you saw (hours, conditions, run quality)..." rows="2"></textarea>
+      <button class="submit-btn" style="margin-top:8px;font-size:.82rem;padding:9px" id="rate-submit-${loc.id}">Submit Rating</button>
+      <p class="form-msg hidden" id="rate-msg-${loc.id}"></p>
+    </div>`;
+
+  // Wire interactive stars
+  const starRow = document.getElementById(`stars-${loc.id}`);
+  let selectedStar = myRating?.rating || 0;
+  if (starRow) {
+    starRow.querySelectorAll('.star-btn').forEach(btn => {
+      const n = parseInt(btn.dataset.n);
+      if (n <= selectedStar) btn.classList.add('selected');
+      btn.addEventListener('mouseenter', () => starRow.querySelectorAll('.star-btn').forEach(b => b.classList.toggle('hover', parseInt(b.dataset.n) <= n)));
+      btn.addEventListener('mouseleave', () => starRow.querySelectorAll('.star-btn').forEach(b => b.classList.remove('hover')));
+      btn.addEventListener('click', () => {
+        selectedStar = n;
+        starRow.querySelectorAll('.star-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.n) <= n));
+      });
+    });
+  }
+
+  document.getElementById(`rate-submit-${loc.id}`)?.addEventListener('click', async () => {
+    const msgEl = document.getElementById(`rate-msg-${loc.id}`);
+    if (!selectedStar) { showMsg(msgEl, 'Tap stars to rate.', true); return; }
+    if (!currentProfile) { openAuthModal(); return; }
+    const review = document.getElementById(`review-${loc.id}`)?.value.trim() || null;
+    const conditions = {};
+    Object.keys(CONDITIONS).forEach(key => {
+      const checked = document.querySelector(`input[name="cond-${key}"]:checked`);
+      if (checked) conditions[key] = checked.value;
+    });
+    const { error } = await sb.from('court_rating').upsert({
+      user_id: currentProfile.id, location_id: loc.id,
+      rating: selectedStar, review, conditions
+    }, { onConflict: 'user_id,location_id' });
+    if (error) { showMsg(msgEl, error.message, true); }
+    else {
+      showMsg(msgEl, 'Rating saved!', false);
+      await loadCourtAverageRatings();
+      // Update the displayed average
+      const avgEl = document.querySelector(`#rating-${loc.id} .star-row:not(.interactive)`);
+      if (avgEl) avgEl.outerHTML = starsHtml(courtRatings[loc.id]?.avg, courtRatings[loc.id]?.count);
+    }
+  });
+}
+
+// ── Busy Times ────────────────────────────────────────────
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const HOURS_LABEL = { 6:'6am',9:'9am',12:'12pm',15:'3pm',18:'6pm',21:'9pm' };
+
+async function loadBusyTimes(loc, panel) {
+  if (!sb) return;
+  const { data } = await sb.from('run').select('scheduled_at').eq('location_id', loc.id);
+  if (!data?.length) { panel.innerHTML += '<p style="font-size:.75rem;color:var(--text-3);padding:4px 0">Not enough run data yet for busy times.</p>'; return; }
+
+  // Aggregate by day of week
+  const byDay = [0,0,0,0,0,0,0];
+  data.forEach(r => { byDay[new Date(r.scheduled_at).getDay()]++; });
+  const maxDay = Math.max(...byDay) || 1;
+
+  // Aggregate by hour bucket
+  const byHour = {};
+  for (let h = 0; h < 24; h++) byHour[h] = 0;
+  data.forEach(r => { byHour[new Date(r.scheduled_at).getHours()]++; });
+  const maxHr = Math.max(...Object.values(byHour)) || 1;
+
+  const dayBars = byDay.map((cnt, i) => {
+    const pct = Math.round((cnt / maxDay) * 100);
+    const intensity = pct > 66 ? 'busy-high' : pct > 33 ? 'busy-mid' : 'busy-low';
+    return `<div class="busy-day-col">
+      <div class="busy-bar-wrap"><div class="busy-bar ${intensity}" style="height:${Math.max(pct,4)}%"></div></div>
+      <div class="busy-day-label">${DAYS_SHORT[i]}</div>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML += `
+    <div class="busy-times-section">
+      <h5>Popular times</h5>
+      <div class="busy-chart">${dayBars}</div>
+      <p class="busy-note">Based on ${data.length} run${data.length!==1?'s':''} posted here</p>
+    </div>`;
+}
+
 // ── Courts ───────────────────────────────────────────────
 async function fetchLocations() {
   if (!sb) return;
@@ -633,6 +818,14 @@ async function loadCourts(applyFilter=false) {
   if (!allLocations.length) await fetchLocations();
   await fetchCourtCounts();
   let pool=[...allLocations];
+
+  if (courtsViewMode === 'favorites') {
+    pool = pool.filter(l => userFavorites.has(l.id));
+    pool.sort((a,b) => scoreCourt(b) - scoreCourt(a));
+    renderCourts(pool, true, true);
+    return;
+  }
+
   if (applyFilter) {
     if (userLat!==null) pool=pool.filter(l=>haversine(userLat,userLon,l.lat,l.lon)<=maxDistance);
     pool=pool.filter(l=>l.sports.some(s=>activeVenues.has(s)));
@@ -642,28 +835,52 @@ async function loadCourts(applyFilter=false) {
     pool.sort((a,b)=>scoreCourt(b)-scoreCourt(a));
     pool=pool.slice(0,10);
   }
-  renderCourts(pool,applyFilter);
+  renderCourts(pool, applyFilter, false);
 }
 
-function renderCourts(locs,filtered=false) {
+function renderCourts(locs, filtered=false, isFavView=false) {
   const list=document.getElementById('courts-list');
   if (!list) return;
-  if (!locs.length) { list.innerHTML='<p class="empty-state">No courts match your filters. Try expanding the distance.</p>'; return; }
+  if (!locs.length) {
+    list.innerHTML = isFavView
+      ? '<p class="empty-state">No favorites yet. Tap the heart on any court to save it.</p>'
+      : '<p class="empty-state">No courts match your filters. Try expanding the distance.</p>';
+    return;
+  }
 
-  const label=filtered?`${locs.length} court${locs.length!==1?'s':''} matching filters`:`Top ${locs.length} for you`;
+  const label = isFavView
+    ? `${locs.length} saved court${locs.length!==1?'s':''}`
+    : filtered
+      ? `${locs.length} court${locs.length!==1?'s':''} matching filters`
+      : `Top ${locs.length} for you`;
   list.innerHTML=`<p class="courts-list-label">${label}</p>`;
 
   locs.forEach(loc=>{
     const dist=userLat!==null?`<span class="court-distance">${haversine(userLat,userLon,loc.lat,loc.lon).toFixed(1)} mi</span>`:'';
     const tags=(loc.sports||[]).map(s=>{const m=VENUE_META[s]||{label:s,cls:''};return`<span class="venue-tag ${m.cls}">${m.label}</span>`;}).join('');
     const runCount=courtRunCounts[loc.id]?.total||0;
+    const isFav=userFavorites.has(loc.id);
+    const rObj=courtRatings[loc.id];
+    const ratingHtml=rObj
+      ? `<div class="court-rating">${'★'.repeat(Math.round(rObj.avg))}<span class="rating-num-sm">${rObj.avg.toFixed(1)} (${rObj.count})</span></div>`
+      : '';
+
     const card=document.createElement('div');
     card.className='court-card';
     card.innerHTML=`
       <div class="court-card-main">
         <div class="court-card-top">
-          <div><h4>${escHtml(loc.name)}</h4><p class="court-city">${loc.city||'Montgomery County'}, MD</p></div>
-          ${dist}
+          <div>
+            <h4>${escHtml(loc.name)}</h4>
+            <p class="court-city">${loc.city||'Montgomery County'}, MD</p>
+            ${ratingHtml}
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:6px">
+            ${dist}
+            <button class="fav-btn${isFav?' fav-active':''}" data-loc="${loc.id}" title="${isFav?'Remove from favorites':'Save to favorites'}">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="${isFav?'currentColor':'none'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            </button>
+          </div>
         </div>
         <div class="sport-tags-row">${tags}</div>
       </div>
@@ -672,19 +889,23 @@ function renderCourts(locs,filtered=false) {
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           ${runCount} Run${runCount!==1?'s':''}
         </button>
+        <button class="court-footer-btn" data-action="rate">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Rate
+        </button>
         <button class="court-footer-btn" data-action="photos">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           Photos
         </button>
-        <button class="court-footer-btn primary" data-action="create">
-          + Run here
-        </button>
+        <button class="court-footer-btn primary" data-action="create">+ Run here</button>
       </div>
       <div class="court-expand" id="expand-${loc.id}"></div>`;
 
     card.querySelector('[data-action="create"]').addEventListener('click', ()=>jumpToCreateRun(loc.id));
     card.querySelector('[data-action="runs"]').addEventListener('click', ()=>toggleCourtExpand(loc,'runs'));
+    card.querySelector('[data-action="rate"]').addEventListener('click', ()=>toggleCourtExpand(loc,'rate'));
     card.querySelector('[data-action="photos"]').addEventListener('click', ()=>toggleCourtExpand(loc,'photos'));
+    card.querySelector('.fav-btn').addEventListener('click', e=>toggleFavorite(loc.id, e.currentTarget));
     list.appendChild(card);
   });
 }
@@ -696,7 +917,9 @@ function toggleCourtExpand(loc,view) {
   panel.classList.toggle('open',!isOpen);
   panel.dataset.view=view;
   if (!isOpen) {
-    if (view==='runs') loadCourtRuns(loc,panel);
+    panel.innerHTML='';
+    if (view==='runs')   { loadCourtRuns(loc,panel); loadBusyTimes(loc,panel); }
+    if (view==='rate')   { if (!currentProfile){openAuthModal();panel.classList.remove('open');return;} openCourtRatingPanel(loc,panel); }
     if (view==='photos') loadCourtPhotos(loc,panel);
   } else {
     panel.innerHTML='';
@@ -876,6 +1099,19 @@ document.getElementById('add-loc-form')?.addEventListener('submit', async e => {
   const notes     = document.getElementById('add-loc-notes').value.trim() || null;
   const venueTypes = [...document.querySelectorAll('input[name="add-loc-venue"]:checked')].map(el => el.value);
 
+  // Collect conditions
+  const conditions = {};
+  ['surface','hoops','lighting','parking'].forEach(key => {
+    const checked = document.querySelector(`input[name="sub-${key}"]:checked`);
+    if (checked) conditions[key] = checked.value;
+  });
+  const extras = [...document.querySelectorAll('input[name="sub-extras"]:checked')].map(el => el.value);
+  if (extras.length) conditions.extras = extras;
+
+  // Collect good run times
+  const goodRunDays  = [...document.querySelectorAll('input[name="sub-days"]:checked')].map(el => el.value);
+  const goodRunTimes = [...document.querySelectorAll('input[name="sub-times"]:checked')].map(el => el.value);
+
   if (!name)             { showMsg(msgEl,'Name is required.',true); return; }
   if (!siteType)         { showMsg(msgEl,'Select a site type.',true); return; }
   if (!address)          { showMsg(msgEl,'Address is required.',true); return; }
@@ -912,6 +1148,8 @@ document.getElementById('add-loc-form')?.addEventListener('submit', async e => {
     is_outdoor:   true,
     notes,
     photo_urls:   photoUrls,
+    conditions:   Object.keys(conditions).length ? conditions : null,
+    good_run_times: (goodRunDays.length||goodRunTimes.length) ? { days: goodRunDays, times: goodRunTimes } : null,
     status:       'pending',
   });
 
@@ -1076,6 +1314,7 @@ async function initMap() {
   const mapEl=document.getElementById('leaflet-map');
   if (!mapEl) return;
   const map=L.map(mapEl,{zoomControl:false}).setView([39.15,-77.2],11);
+  leafletMap=map;
   L.control.zoom({position:'bottomright'}).addTo(map);
 
   // CartoDB Voyager — clean, professional tiles
