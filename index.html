@@ -2,445 +2,535 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImThere — Find your next run</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ImThere</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 
-  <header class="site-header">
-    <div class="brand">ImThere</div>
-    <button id="auth-trigger" class="auth-btn">Sign in</button>
-  </header>
+<header class="site-header">
+  <div class="brand">ImThere</div>
+  <button id="auth-trigger" class="auth-pill">Sign in</button>
+</header>
 
-  <nav class="main-nav">
-    <button class="nav-btn active" data-section="courts">Courts</button>
-    <button class="nav-btn" data-section="create">Create Run</button>
-    <button class="nav-btn" data-section="map">Map</button>
-    <button class="nav-btn" data-section="profile">Profile</button>
-    <button class="nav-btn" data-section="app">App</button>
-  </nav>
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-section="courts">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Courts</span>
+  </button>
+  <button class="nav-btn" data-section="create">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <span>Create</span>
+  </button>
+  <button class="nav-btn" data-section="map">
+    <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    <span>Map</span>
+  </button>
+  <button class="nav-btn" data-section="dms">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    <span>Inbox</span>
+  </button>
+  <button class="nav-btn" data-section="profile">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profile</span>
+  </button>
+  <button class="nav-btn" data-section="app">
+    <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
+    <span>App</span>
+  </button>
+</nav>
 
-  <main class="main-content">
+<main class="main-content">
 
-    <!-- ===== COURTS ===== -->
-    <section id="courts" class="section active">
-      <div class="section-top">
-        <div class="courts-header">
-          <div>
-            <h1>Courts near you</h1>
-            <p id="location-status" class="location-status">Detecting location...</p>
-          </div>
-          <button class="filter-toggle-btn" id="filter-toggle">Filter</button>
-        </div>
+  <!-- ===== COURTS ===== -->
+  <section id="courts" class="section active">
+
+    <div class="courts-header">
+      <div>
+        <h1>Courts near you</h1>
+        <p id="location-status">Detecting location...</p>
       </div>
-
-      <!-- Filter panel -->
-      <div id="filter-panel" class="filter-panel hidden">
-        <div class="filter-section">
-          <label class="filter-label">Venue type</label>
-          <div class="filter-checks">
-            <label class="check-opt"><input type="checkbox" name="venue" value="basketball" checked> Basketball Courts</label>
-            <label class="check-opt"><input type="checkbox" name="venue" value="field" checked> Fields</label>
-            <label class="check-opt"><input type="checkbox" name="venue" value="tennis_pickleball" checked> Tennis / Pickleball</label>
-          </div>
-        </div>
-        <div class="filter-section" id="distance-filter-section">
-          <label class="filter-label">Max distance: <span id="distance-label">5 mi</span></label>
-          <input type="range" id="distance-slider" min="1" max="50" value="5" step="1" class="distance-slider">
-        </div>
-        <div class="filter-actions">
-          <button class="submit-btn" id="apply-filter">Apply</button>
-          <button class="cancel-btn" id="reset-filter">Reset</button>
-        </div>
-      </div>
-
-      <button class="create-run-banner" id="goto-create">
-        <span>+ Create a Run</span>
-        <small>Let people know you're playing</small>
+      <button class="filter-toggle-btn" id="filter-toggle">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter
       </button>
+    </div>
 
-      <div id="courts-list" class="courts-list">
-        <p class="loading-msg">Loading courts...</p>
+    <div id="filter-panel" class="filter-panel hidden">
+      <div class="filter-section">
+        <label class="filter-label">Venue type</label>
+        <div class="filter-checks">
+          <label class="check-opt"><input type="checkbox" name="venue" value="basketball" checked> Basketball Courts</label>
+          <label class="check-opt"><input type="checkbox" name="venue" value="field" checked> Fields</label>
+          <label class="check-opt"><input type="checkbox" name="venue" value="tennis_pickleball" checked> Tennis / Pickleball</label>
+        </div>
       </div>
-    </section>
+      <div class="filter-section" id="distance-filter-section">
+        <label class="filter-label">Max distance: <span id="distance-label">5 mi</span></label>
+        <input type="range" id="distance-slider" min="1" max="50" value="5" step="1" class="distance-slider">
+      </div>
+      <div class="filter-actions">
+        <button class="submit-btn" id="apply-filter">Apply</button>
+        <button class="cancel-btn" id="reset-filter">Reset</button>
+      </div>
+    </div>
 
-    <!-- ===== CREATE RUN ===== -->
-    <section id="create" class="section">
-      <div class="section-top">
-        <h1>Create a Run</h1>
-        <p>Post where you're playing so people can show up.</p>
+    <button class="create-run-banner" id="goto-create">
+      <strong>+ Create a Run</strong>
+      <small>Let people know you're playing</small>
+    </button>
+
+    <div id="courts-list">
+      <p class="loading-msg">Loading courts...</p>
+    </div>
+  </section>
+
+  <!-- ===== CREATE RUN ===== -->
+  <section id="create" class="section">
+    <div class="section-top">
+      <h1>Create a Run</h1>
+      <p>Post where you're playing so people can show up.</p>
+    </div>
+
+    <form id="create-run-form" class="form-card">
+      <div class="form-group">
+        <label>Where?</label>
+        <div class="sport-search-wrap">
+          <input type="text" id="run-location-input" placeholder="Search courts..." autocomplete="off">
+          <div id="location-dropdown" class="sport-dropdown hidden"></div>
+        </div>
+        <input type="hidden" id="run-location">
       </div>
 
-      <form id="create-run-form" class="run-form">
+      <div class="form-group">
+        <label>Sport / Activity</label>
+        <div class="sport-search-wrap">
+          <input type="text" id="run-sport-input" placeholder="Type to search or scroll..." autocomplete="off">
+          <div id="sport-dropdown" class="sport-dropdown hidden"></div>
+        </div>
+        <p id="sport-hint" class="field-note hidden"></p>
+      </div>
 
+      <div class="form-row-2">
         <div class="form-group">
-          <label>Where?</label>
-          <div class="sport-search-wrap">
-            <input type="text" id="run-location-input" placeholder="Type to search or scroll..." autocomplete="off">
-            <div id="location-dropdown" class="sport-dropdown hidden"></div>
-          </div>
-          <input type="hidden" id="run-location">
+          <label>Date</label>
+          <input type="date" id="run-date" required>
         </div>
-
         <div class="form-group">
-          <label>Sport / Activity</label>
-          <div class="sport-search-wrap">
-            <input type="text" id="run-sport-input" placeholder="Type to search or scroll..." autocomplete="off">
-            <div id="sport-dropdown" class="sport-dropdown hidden"></div>
-          </div>
-          <p id="sport-hint" class="field-note hidden"></p>
+          <label>Time</label>
+          <input type="time" id="run-time" required>
         </div>
+      </div>
 
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Date</label>
-            <input type="date" id="run-date" required>
-          </div>
-          <div class="form-group">
-            <label>Time</label>
-            <input type="time" id="run-time" required>
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Already coming</label>
-            <input type="number" id="run-going" min="1" value="1" required>
-          </div>
-          <div class="form-group">
-            <label>Need (target)</label>
-            <input type="number" id="run-needed" min="2" placeholder="e.g. 10">
-            <span class="field-note">More always welcome</span>
-          </div>
-        </div>
-
+      <div class="form-row-2">
         <div class="form-group">
-          <label>Who can join?</label>
-          <div class="radio-row">
-            <label class="radio-opt"><input type="radio" name="privacy" value="public" checked> Public</label>
-            <label class="radio-opt"><input type="radio" name="privacy" value="friends"> Friends</label>
-            <label class="radio-opt"><input type="radio" name="privacy" value="private"> Private</label>
-          </div>
+          <label>Already going</label>
+          <input type="number" id="run-going" min="1" value="1">
         </div>
-
         <div class="form-group">
-          <label>Notes <span class="optional">(optional)</span></label>
-          <textarea id="run-notes" placeholder="e.g. Bring water, half court only, all skill levels" rows="2"></textarea>
+          <label>Need (optional)</label>
+          <input type="number" id="run-needed" min="2" placeholder="e.g. 10">
         </div>
+      </div>
 
-        <div class="form-group notify-row">
-          <label class="toggle-label">
-            <input type="checkbox" id="run-notify" checked>
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            Notify me when someone joins
+      <div class="form-group">
+        <label>Who can join?</label>
+        <div class="radio-row">
+          <label class="radio-opt"><input type="radio" name="privacy" value="public" checked> Public</label>
+          <label class="radio-opt"><input type="radio" name="privacy" value="friends"> Friends</label>
+          <label class="radio-opt"><input type="radio" name="privacy" value="private"> Private</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes <span class="optional">(optional)</span></label>
+        <textarea id="run-notes" placeholder="Bring water, all skill levels welcome..." rows="2"></textarea>
+      </div>
+
+      <div class="form-group notify-row">
+        <label class="toggle-label">
+          <input type="checkbox" id="run-notify" checked>
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          Notify me when someone joins
+        </label>
+      </div>
+
+      <button type="submit" class="submit-btn" id="create-run-submit">Post Run</button>
+      <p id="create-run-msg" class="form-msg hidden"></p>
+    </form>
+  </section>
+
+  <!-- ===== MAP ===== -->
+  <section id="map" class="section map-section">
+    <div id="leaflet-map"></div>
+  </section>
+
+  <!-- ===== DMs ===== -->
+  <section id="dms" class="section">
+    <div class="dm-header">
+      <h1>Inbox</h1>
+    </div>
+
+    <!-- New DM search -->
+    <div class="dm-new-btn">
+      <input type="text" id="dm-search-user" placeholder="Message someone by username...">
+      <button id="dm-start-btn">Start</button>
+    </div>
+
+    <!-- Conversation list -->
+    <div id="dm-conv-list" class="dm-conv-list">
+      <div class="dm-empty">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <p>No messages yet.<br>Search for a player above to start a conversation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DM Thread (full-screen overlay) -->
+  <div id="dm-thread" class="dm-thread hidden">
+    <div class="dm-thread-header">
+      <button class="dm-back" id="dm-back-btn">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="dm-thread-avatar" id="dm-thread-avatar">?</div>
+      <div>
+        <div class="dm-thread-name" id="dm-thread-name">Player</div>
+      </div>
+    </div>
+    <div class="dm-messages" id="dm-messages"></div>
+    <div class="dm-input-bar">
+      <textarea id="dm-input" placeholder="Message..." rows="1"></textarea>
+      <button class="dm-send-btn" id="dm-send-btn">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PROFILE ===== -->
+  <section id="profile" class="section">
+
+    <!-- Not signed in -->
+    <div id="profile-gate" class="gate-view">
+      <svg viewBox="0 0 24 24" width="56" height="56" stroke="var(--border)" fill="none" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <h2>Sign in to ImThere</h2>
+      <p>Track your activity, follow players, and post runs.</p>
+      <button class="btn-primary" id="profile-signin-btn" style="width:auto;padding:12px 32px">Sign in / Sign up</button>
+    </div>
+
+    <!-- Signed in -->
+    <div id="profile-view" class="hidden">
+
+      <!-- Stories row -->
+      <div class="stories-row" id="stories-row">
+        <div class="story-item" id="story-add-btn">
+          <div class="story-ring add-story">
+            <div class="story-add-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </div>
+          </div>
+          <span class="story-label">Add</span>
+        </div>
+        <div id="stories-list" style="display:contents"></div>
+      </div>
+
+      <!-- Profile header -->
+      <div class="profile-header">
+        <div class="profile-avatar-wrap">
+          <div class="avatar-xl" id="profile-avatar">?</div>
+          <label class="avatar-edit-btn" for="avatar-upload" title="Change photo">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <input type="file" id="avatar-upload" accept="image/*" style="display:none">
           </label>
         </div>
-
-        <button type="submit" class="submit-btn" id="create-run-submit">Post Run</button>
-        <p id="create-run-msg" class="form-msg hidden"></p>
-      </form>
-    </section>
-
-    <!-- ===== MAP ===== -->
-    <section id="map" class="section map-section">
-      <div id="leaflet-map"></div>
-    </section>
-
-    <!-- ===== PROFILE ===== -->
-    <section id="profile" class="section">
-
-      <!-- Not signed in -->
-      <div id="profile-gate" class="gate-view">
-        <h2>Sign in to ImThere</h2>
-        <p>Track your activity, follow players, and post runs from your profile.</p>
-        <button class="submit-btn" id="profile-signin-btn">Sign in / Sign up</button>
-      </div>
-
-      <!-- Signed in -->
-      <div id="profile-view" class="hidden">
-
-        <div class="profile-card">
-          <div class="avatar-large" id="profile-avatar">?</div>
-          <div class="profile-info">
-            <h2 id="profile-display-name">Loading...</h2>
-            <p id="profile-username" class="profile-username"></p>
-            <p id="profile-city" class="profile-city"></p>
-            <p id="profile-bio" class="profile-bio"></p>
-          </div>
-          <button class="edit-profile-btn" id="edit-profile-btn">Edit</button>
-        </div>
-
-        <div class="profile-stats">
-          <div class="stat"><span id="stat-posts">0</span><small>Posts</small></div>
-          <div class="stat"><span id="stat-runs">0</span><small>Runs</small></div>
-          <div class="stat"><span id="stat-followers">0</span><small>Followers</small></div>
-          <div class="stat"><span id="stat-following">0</span><small>Following</small></div>
-        </div>
-
-        <!-- Edit profile form -->
-        <div id="edit-profile-form" class="edit-form hidden">
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>Full name</label>
-              <input type="text" id="edit-display-name" placeholder="Your name">
-            </div>
-            <div class="form-group">
-              <label>Username</label>
-              <input type="text" id="edit-username" placeholder="username">
-            </div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>Phone <span class="optional">(optional)</span></label>
-              <input type="tel" id="edit-phone" placeholder="(555) 000-0000">
-            </div>
-            <div class="form-group">
-              <label>City <span class="optional">(optional)</span></label>
-              <input type="text" id="edit-city" placeholder="Bethesda, MD">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Bio <span class="optional">(optional)</span></label>
-            <textarea id="edit-bio" placeholder="Hooper. Pick up only. Any skill level." rows="2"></textarea>
-          </div>
-          <div class="form-row-2">
-            <button class="submit-btn" id="save-profile-btn">Save</button>
-            <button class="cancel-btn" id="cancel-edit-btn">Cancel</button>
-          </div>
-          <p id="edit-profile-msg" class="form-msg hidden"></p>
-        </div>
-
-        <!-- Activity pie chart -->
-        <div class="activity-card" id="activity-card">
-          <h3>Your Activity</h3>
-          <div class="activity-inner">
-            <canvas id="activity-chart" width="140" height="140"></canvas>
-            <div id="activity-legend" class="activity-legend"></div>
-          </div>
-          <p id="activity-empty" class="empty-state hidden">Post a run to start tracking your activity.</p>
-        </div>
-
-        <!-- Players nearby -->
-        <div id="nearby-players-card" class="nearby-players hidden">
-          <h3>Players near you</h3>
-          <div id="nearby-players-list"></div>
-        </div>
-
-        <!-- Post composer -->
-        <div class="post-composer">
-          <textarea id="post-content" placeholder="What's happening at the courts?" rows="3"></textarea>
-          <div class="post-composer-row">
-            <select id="post-location" class="post-location-sel">
-              <option value="">Tag a court (optional)</option>
-            </select>
-            <button id="post-submit-btn" class="post-submit">Post</button>
-          </div>
-          <p id="post-msg" class="form-msg hidden"></p>
-        </div>
-
-        <!-- Find players -->
-        <div class="find-players">
-          <h3>Find players</h3>
-          <div class="search-row">
-            <input type="text" id="player-search" placeholder="Search by username...">
-            <button id="player-search-btn" class="search-btn">Search</button>
-          </div>
-          <div id="player-results" class="player-results"></div>
-        </div>
-
-        <!-- Feed -->
-        <div class="feed-section">
-          <div class="feed-tabs">
-            <button class="feed-tab-btn active" data-feed="all">All Posts</button>
-            <button class="feed-tab-btn" data-feed="following">Following</button>
-            <button class="feed-tab-btn" data-feed="mine">Mine</button>
-          </div>
-          <div id="post-feed" class="post-feed">
-            <p class="loading-msg">Loading...</p>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ===== APP ===== -->
-    <section id="app" class="section app-section">
-      <div class="app-inner">
-        <div class="app-copy">
-          <h1>ImThere is coming.</h1>
-          <p>The full mobile app — live run tracking, court profiles, friend feeds, group chats — is in development. Drop your email to be first.</p>
-
-          <div class="store-badges">
-            <div class="store-badge">
-              <div><small>Coming to</small><strong>App Store</strong></div>
-            </div>
-            <div class="store-badge">
-              <div><small>Coming to</small><strong>Google Play</strong></div>
-            </div>
-          </div>
-
-          <div class="waitlist-row">
-            <input type="email" id="waitlist-email" placeholder="your@email.com">
-            <button id="waitlist-btn">Notify me</button>
-          </div>
-          <p id="waitlist-msg" class="form-msg hidden">You're on the list</p>
-
-          <div class="feature-pills">
-            <span>Court profiles</span>
-            <span>Live runs map</span>
-            <span>Friends feed</span>
-            <span>Run chats</span>
-            <span>Activity stats</span>
-          </div>
-        </div>
-
-        <div class="phone-mockup">
-          <div class="phone-frame">
-            <div class="phone-notch"></div>
-            <div class="app-body">
-              <header class="appbar">
-                <div class="appbrand">ImThere</div>
-                <div class="apploc">Bethesda, MD · 3 runs open</div>
-              </header>
-              <nav class="tabs">
-                <button class="tab-btn active" data-tab="nearby">Nearby</button>
-                <button class="tab-btn" data-tab="myruns">My Runs</button>
-                <button class="tab-btn" data-tab="invites">Invites</button>
-                <button class="tab-btn" data-tab="chats">Chats</button>
-              </nav>
-              <div class="app-content">
-                <section id="nearby" class="tab-panel active">
-                  <h2 class="section-label">Open runs today</h2>
-                  <div class="run-card" data-run="Pickup 5v5" data-meta="White Flint Park · 6:30 PM">
-                    <div class="run-info">
-                      <div class="run-top"><h3>Pickup 5v5</h3><span class="sport-tag basketball">Basketball</span></div>
-                      <p class="run-meta">White Flint Park · 6:30 PM</p>
-                      <div class="avatars">
-                        <span class="avatar a1">JN</span><span class="avatar a2">DL</span><span class="avatar a3">TR</span>
-                        <span class="joined-count">7/10 joined</span>
-                      </div>
-                    </div>
-                    <button class="join-btn">Join</button>
-                  </div>
-                  <div class="run-card" data-run="Sunday 6s" data-meta="Cabin John Park · 9:00 AM">
-                    <div class="run-info">
-                      <div class="run-top"><h3>Sunday 6s</h3><span class="sport-tag soccer">Soccer</span></div>
-                      <p class="run-meta">Cabin John Park · 9:00 AM</p>
-                      <div class="avatars">
-                        <span class="avatar a4">AK</span><span class="avatar a1">MF</span>
-                        <span class="joined-count">6/6 · Full</span>
-                      </div>
-                    </div>
-                    <button class="join-btn full" disabled>Full</button>
-                  </div>
-                  <div class="run-card" data-run="Morning 3s" data-meta="Bethesda YMCA · 7:00 AM">
-                    <div class="run-info">
-                      <div class="run-top"><h3>Morning 3s</h3><span class="sport-tag basketball">Basketball</span></div>
-                      <p class="run-meta">Bethesda YMCA · 7:00 AM</p>
-                      <div class="avatars"><span class="avatar a2">SW</span><span class="joined-count">1/6 joined</span></div>
-                    </div>
-                    <button class="join-btn">Join</button>
-                  </div>
-                  <div class="invite-banner"><strong>Invite friends to a run</strong><span>Share a link or send an ImThere pass</span></div>
-                </section>
-                <section id="myruns" class="tab-panel">
-                  <h2 class="section-label">Your upcoming runs</h2>
-                  <p id="myruns-empty" class="empty-state">Join a run from Nearby and it'll show up here.</p>
-                  <div id="myruns-list"></div>
-                </section>
-                <section id="invites" class="tab-panel">
-                  <h2 class="section-label">Invites</h2>
-                  <div class="run-card">
-                    <div class="run-info">
-                      <div class="run-top"><h3>Friday Night Lights</h3><span class="sport-tag basketball">Basketball</span></div>
-                      <p class="run-meta">Walt Whitman HS · 8:00 PM · Jordan</p>
-                    </div>
-                    <button class="join-btn">Accept</button>
-                  </div>
-                </section>
-                <section id="chats" class="tab-panel">
-                  <h2 class="section-label">Run chats</h2>
-                  <div class="chat-list">
-                    <div class="chat-row" data-chat="pickup5v5chat"><div><strong>Pickup 5v5</strong><p class="chat-preview">DL: see you at 6:30</p></div></div>
-                    <div class="chat-row" data-chat="morning3schat"><div><strong>Morning 3s</strong><p class="chat-preview">SW: anyone else coming?</p></div></div>
-                  </div>
-                  <h2 class="section-label">Messages</h2>
-                  <div class="chat-list">
-                    <div class="chat-row" data-chat="dmjordan"><div><strong>Jordan</strong><p class="chat-preview">you up for tonight?</p></div></div>
-                  </div>
-                </section>
-              </div>
-            </div>
-            <div id="chat-thread" class="chat-thread hidden">
-              <div class="chat-thread-header">
-                <button id="chat-back">&larr;</button>
-                <strong id="chat-thread-title"></strong>
-              </div>
-              <div id="chat-messages" class="chat-messages"></div>
-              <form id="chat-form" class="chat-form">
-                <input id="chat-input" type="text" placeholder="Message" autocomplete="off">
-                <button type="submit">Send</button>
-              </form>
-            </div>
-          </div>
-          <p class="phone-caption">concept preview of the full app</p>
+        <div class="profile-info">
+          <h2 id="profile-display-name">Loading...</h2>
+          <p class="profile-username" id="profile-username">@username</p>
+          <p class="profile-bio-text" id="profile-bio"></p>
+          <p class="profile-city-text" id="profile-city"></p>
+          <button class="btn-outline" id="edit-profile-btn">Edit Profile</button>
         </div>
       </div>
-    </section>
 
-  </main>
+      <!-- Stats -->
+      <div class="profile-stats">
+        <div class="stat"><strong id="stat-posts">0</strong><small>Posts</small></div>
+        <div class="stat"><strong id="stat-runs">0</strong><small>Runs</small></div>
+        <div class="stat"><strong id="stat-followers">0</strong><small>Followers</small></div>
+        <div class="stat"><strong id="stat-following">0</strong><small>Following</small></div>
+      </div>
 
-  <!-- Auth modal -->
-  <div id="auth-modal" class="modal-overlay hidden">
-    <div class="modal-box">
-      <button id="modal-close" class="modal-close">&times;</button>
-      <h2 id="auth-title">Create your account</h2>
-      <p id="auth-subtitle">Join ImThere to post runs and follow players.</p>
-
-      <!-- Sign up fields (hidden in login mode) -->
-      <div id="signup-fields">
+      <!-- Edit form -->
+      <div id="edit-profile-form" class="edit-form hidden">
+        <h4>Edit Profile</h4>
         <div class="form-row-2">
           <div class="form-group">
             <label>Full name</label>
-            <input type="text" id="signup-name" placeholder="Your name">
+            <input type="text" id="edit-display-name" placeholder="Your name">
           </div>
           <div class="form-group">
             <label>Username</label>
-            <input type="text" id="signup-username" placeholder="username">
+            <input type="text" id="edit-username" placeholder="username">
           </div>
         </div>
         <div class="form-row-2">
           <div class="form-group">
             <label>Phone <span class="optional">(optional)</span></label>
-            <input type="tel" id="signup-phone" placeholder="(555) 000-0000">
+            <input type="tel" id="edit-phone" placeholder="(555) 000-0000">
           </div>
           <div class="form-group">
             <label>City <span class="optional">(optional)</span></label>
-            <input type="text" id="signup-city" placeholder="Bethesda, MD">
+            <input type="text" id="edit-city" placeholder="Bethesda, MD">
           </div>
+        </div>
+        <div class="form-group">
+          <label>Bio <span class="optional">(optional)</span></label>
+          <textarea id="edit-bio" placeholder="Hooper. Pickup only. Any skill level." rows="2"></textarea>
+        </div>
+        <div class="edit-actions">
+          <button class="submit-btn" id="save-profile-btn">Save</button>
+          <button class="cancel-btn" id="cancel-edit-btn">Cancel</button>
+        </div>
+        <p id="edit-profile-msg" class="edit-msg hidden"></p>
+      </div>
+
+      <!-- Activity chart -->
+      <div class="activity-card" id="activity-card">
+        <h4>Activity breakdown</h4>
+        <div class="activity-inner">
+          <canvas id="activity-chart" width="130" height="130"></canvas>
+          <div id="activity-legend" class="activity-legend"></div>
+        </div>
+        <p id="activity-empty" class="hidden">Post your first run to see your breakdown.</p>
+      </div>
+
+      <!-- Nearby players -->
+      <div id="nearby-players-card" class="nearby-card hidden">
+        <h4>Players near you</h4>
+        <div id="nearby-players-list"></div>
+      </div>
+
+      <!-- Post grid -->
+      <div class="grid-tabs">
+        <button class="grid-tab active" data-grid="posts">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="grid-tab" data-grid="list">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="profile-post-grid" class="post-grid"></div>
+
+      <!-- Post composer -->
+      <div class="post-composer">
+        <div class="post-composer-input">
+          <div class="post-avatar" id="composer-avatar">?</div>
+          <div class="post-composer-right">
+            <textarea id="post-content" placeholder="What's happening at the courts?" rows="2"></textarea>
+            <div id="composer-image-preview" class="composer-image-preview hidden">
+              <img id="composer-preview-img" src="" alt="preview">
+              <button class="remove-preview" id="remove-preview-btn">&times;</button>
+            </div>
+            <input type="file" id="post-image-upload" accept="image/*" style="display:none">
+            <div class="post-composer-actions">
+              <div class="post-composer-media">
+                <button type="button" class="media-btn" id="post-photo-btn" title="Add photo">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </button>
+                <select id="post-location" class="post-location-sel" style="max-width:160px;border:none;font-size:.78rem;color:var(--text-3);outline:none;cursor:pointer">
+                  <option value="">Tag a court...</option>
+                </select>
+              </div>
+              <button id="post-submit-btn">Post</button>
+            </div>
+          </div>
+        </div>
+        <p id="post-msg" class="form-msg hidden"></p>
+      </div>
+
+      <!-- Find players -->
+      <div class="find-players">
+        <h4>Find players</h4>
+        <div class="search-row">
+          <input type="text" id="player-search" placeholder="Search by username...">
+          <button id="player-search-btn">Search</button>
+        </div>
+        <div id="player-results"></div>
+      </div>
+
+      <!-- Feed -->
+      <div class="feed-section">
+        <div class="feed-tabs">
+          <button class="feed-tab-btn active" data-feed="all">All</button>
+          <button class="feed-tab-btn" data-feed="following">Following</button>
+          <button class="feed-tab-btn" data-feed="mine">Mine</button>
+        </div>
+        <div id="post-feed">
+          <p class="loading-msg">Loading...</p>
         </div>
       </div>
 
-      <form id="auth-form">
+    </div>
+  </section>
+
+  <!-- ===== APP ===== -->
+  <section id="app" class="section">
+    <div class="app-inner">
+      <div class="app-copy">
+        <h1>ImThere is coming.</h1>
+        <p>The full mobile app — live run tracking, court profiles, friend feeds, group chats — is in development. Drop your email to be first.</p>
+        <div class="store-badges">
+          <div class="store-badge"><small>Coming to</small><strong>App Store</strong></div>
+          <div class="store-badge"><small>Coming to</small><strong>Google Play</strong></div>
+        </div>
+        <div class="waitlist-row">
+          <input type="email" id="waitlist-email" placeholder="your@email.com">
+          <button id="waitlist-btn">Notify me</button>
+        </div>
+        <p id="waitlist-msg" class="waitlist-msg hidden">You're on the list.</p>
+        <div class="feature-pills">
+          <span>Court profiles</span><span>Live runs map</span><span>Friends feed</span>
+          <span>Run chats</span><span>Activity stats</span><span>DMs</span>
+        </div>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="appbar">
+              <div class="appbrand">ImThere</div>
+              <div class="apploc">Bethesda · 3 runs open</div>
+            </div>
+            <div class="phone-tabs">
+              <button class="tab-btn active" data-tab="nearby">Nearby</button>
+              <button class="tab-btn" data-tab="myruns">My Runs</button>
+              <button class="tab-btn" data-tab="chats">Inbox</button>
+            </div>
+            <div class="app-content">
+              <div id="nearby" class="tab-panel active">
+                <p class="section-label">Open runs today</p>
+                <div class="run-card" data-run="Pickup 5v5" data-meta="White Flint Park · 6:30 PM">
+                  <div class="run-info">
+                    <div class="run-top"><h3>Pickup 5v5</h3><span class="sport-tag basketball">Basketball</span></div>
+                    <p class="run-meta">White Flint Park · 6:30 PM</p>
+                    <div class="avatars"><span class="avatar a1">JN</span><span class="avatar a2">DL</span><span class="avatar a3">TR</span><span class="joined-count">7/10</span></div>
+                  </div>
+                  <button class="join-btn">Join</button>
+                </div>
+                <div class="run-card" data-run="Sunday 6s" data-meta="Cabin John Park · 9:00 AM">
+                  <div class="run-info">
+                    <div class="run-top"><h3>Sunday 6s</h3><span class="sport-tag soccer">Soccer</span></div>
+                    <p class="run-meta">Cabin John Park · 9:00 AM</p>
+                    <div class="avatars"><span class="avatar a4">AK</span><span class="avatar a1">MF</span><span class="joined-count">Full</span></div>
+                  </div>
+                  <button class="join-btn full" disabled>Full</button>
+                </div>
+                <div class="run-card" data-run="Morning 3s" data-meta="Bethesda YMCA · 7:00 AM">
+                  <div class="run-info">
+                    <div class="run-top"><h3>Morning 3s</h3><span class="sport-tag basketball">Basketball</span></div>
+                    <p class="run-meta">Bethesda YMCA · 7:00 AM</p>
+                    <div class="avatars"><span class="avatar a2">SW</span><span class="joined-count">1/6</span></div>
+                  </div>
+                  <button class="join-btn">Join</button>
+                </div>
+              </div>
+              <div id="myruns" class="tab-panel">
+                <p class="section-label">Your upcoming runs</p>
+                <p id="myruns-empty">Join a run from Nearby.</p>
+                <div id="myruns-list"></div>
+              </div>
+              <div id="chats" class="tab-panel">
+                <p class="section-label">Run chats</p>
+                <div class="chat-list">
+                  <div class="chat-row" data-chat="pickup5v5chat"><div class="chat-avatar">PU</div><div class="chat-info"><div class="chat-name">Pickup 5v5</div><div class="chat-prev">DL: see you at 6:30</div></div></div>
+                  <div class="chat-row" data-chat="morning3schat"><div class="chat-avatar">M3</div><div class="chat-info"><div class="chat-name">Morning 3s</div><div class="chat-prev">SW: anyone else coming?</div></div></div>
+                </div>
+              </div>
+            </div>
+            <div id="chat-thread" class="chat-thread hidden">
+              <div class="chat-thread-header">
+                <button id="chat-back" class="chat-back">&larr;</button>
+                <strong id="chat-thread-title"></strong>
+              </div>
+              <div id="chat-messages" class="chat-messages"></div>
+              <form id="chat-form" class="chat-form">
+                <input id="chat-input" type="text" placeholder="Message..." autocomplete="off">
+                <button type="submit">Send</button>
+              </form>
+            </div>
+          </div>
+          <p class="phone-caption">concept preview</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== AUTH MODAL ===== -->
+<div id="auth-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <button id="modal-close" class="modal-close">&times;</button>
+    <h2 id="auth-title" class="modal-title">Create your account</h2>
+    <p id="auth-subtitle" class="modal-subtitle">Join ImThere to post runs and follow players.</p>
+
+    <div id="signup-fields">
+      <div class="form-row-2">
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="auth-email" placeholder="your@email.com" required autocomplete="email">
+          <label>Full name</label>
+          <input type="text" id="signup-name" placeholder="Your name">
         </div>
         <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="auth-password" placeholder="Min 6 characters" minlength="6" required>
+          <label>Username</label>
+          <input type="text" id="signup-username" placeholder="username">
         </div>
-        <button type="submit" id="auth-submit">Create account</button>
-        <p id="auth-error" class="auth-error hidden"></p>
-      </form>
-      <p class="auth-toggle">Already have an account? <a href="#" id="auth-switch">Log in</a></p>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Phone <span class="optional">(optional)</span></label>
+          <input type="tel" id="signup-phone" placeholder="(555) 000-0000">
+        </div>
+        <div class="form-group">
+          <label>City <span class="optional">(optional)</span></label>
+          <input type="text" id="signup-city" placeholder="Bethesda, MD">
+        </div>
+      </div>
+    </div>
+
+    <form id="auth-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="your@email.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+      </div>
+      <div id="auth-error" class="auth-error hidden"></div>
+      <button type="submit" class="submit-btn" id="auth-submit">Create account</button>
+    </form>
+
+    <div class="auth-toggle">
+      Already have an account? <a href="#" id="auth-switch">Log in</a>
     </div>
   </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="script.js"></script>
+<!-- ===== STORY VIEWER ===== -->
+<div id="story-viewer" class="story-viewer hidden">
+  <div class="story-viewer-inner">
+    <button class="story-viewer-close" id="story-viewer-close">&times;</button>
+    <div class="story-viewer-text" id="story-viewer-content">
+      <div class="story-viewer-author" id="story-viewer-author"></div>
+      <div id="story-viewer-body"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
