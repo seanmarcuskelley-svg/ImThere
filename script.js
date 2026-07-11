@@ -11,10 +11,11 @@ catch (e) { console.error('Supabase init failed:', e); }
 
 // ── Sports / Venues ──────────────────────────────────────
 const VENUE_META = {
-  basketball:        { label: 'Basketball', cls: 'venue-bball' },
-  tennis_pickleball: { label: 'Tennis / Pickleball', cls: 'venue-tennis' },
-  field:             { label: 'Field', cls: 'venue-field' },
+  basketball:        { label: 'Courts', cls: 'venue-bball' },
+  tennis_pickleball: { label: 'Tennis Courts', cls: 'venue-tennis' },
+  field:             { label: 'Fields', cls: 'venue-field' },
 };
+const SITE_TYPES = ['Park','High School','Middle School','Elementary School','Community Center','Recreation Center','Other'];
 const SPORTS_BY_VENUE = {
   basketball:        ['Basketball'],
   tennis_pickleball: ['Tennis','Pickleball'],
@@ -104,8 +105,8 @@ async function handleAuth(user) {
   currentUser = user;
   const btn = document.getElementById('auth-trigger');
   if (user) {
-    btn.textContent = user.email.split('@')[0];
     await ensureProfile(user);
+    btn.textContent = currentProfile?.username || user.email.split('@')[0];
     courtCountsLoaded = false; courtRunCounts = {};
     loadCourts(false);
   } else {
@@ -810,6 +811,117 @@ async function uploadCourtPhoto(e,loc) {
   const panel=document.getElementById(`expand-${loc.id}`);
   if (panel) loadCourtPhotos(loc,panel);
 }
+
+// ── Add Location ─────────────────────────────────────────
+let addLocPhotos = []; // File[]
+let addLocLat = null, addLocLon = null;
+
+document.getElementById('add-location-btn')?.addEventListener('click', () => {
+  if (!currentProfile) { openAuthModal(); return; }
+  document.getElementById('add-location-modal').classList.remove('hidden');
+  addLocPhotos = []; addLocLat = null; addLocLon = null;
+  document.getElementById('add-loc-photo-preview').innerHTML = '';
+  document.getElementById('add-loc-form').reset();
+  document.getElementById('add-loc-msg').classList.add('hidden');
+  document.getElementById('add-loc-coords').textContent = '';
+});
+document.getElementById('add-location-modal')?.addEventListener('click', e => {
+  if (e.target.id === 'add-location-modal') document.getElementById('add-location-modal').classList.add('hidden');
+});
+document.getElementById('add-loc-close')?.addEventListener('click', () => {
+  document.getElementById('add-location-modal').classList.add('hidden');
+});
+
+document.getElementById('add-loc-use-location')?.addEventListener('click', () => {
+  const btn = document.getElementById('add-loc-use-location');
+  btn.textContent = 'Getting location...'; btn.disabled = true;
+  navigator.geolocation?.getCurrentPosition(pos => {
+    addLocLat = pos.coords.latitude; addLocLon = pos.coords.longitude;
+    document.getElementById('add-loc-coords').textContent = `${addLocLat.toFixed(5)}, ${addLocLon.toFixed(5)}`;
+    btn.textContent = 'Location captured'; btn.disabled = false;
+  }, () => { btn.textContent = 'Use my location'; btn.disabled = false; showBanner('Location unavailable.',true); });
+});
+
+document.getElementById('add-loc-photos')?.addEventListener('change', e => {
+  const files = Array.from(e.target.files);
+  addLocPhotos = [...addLocPhotos, ...files].slice(0, 6);
+  renderAddLocPreviews();
+});
+
+function renderAddLocPreviews() {
+  const wrap = document.getElementById('add-loc-photo-preview');
+  wrap.innerHTML = addLocPhotos.map((f,i) => {
+    const url = URL.createObjectURL(f);
+    return `<div class="add-loc-thumb" style="background-image:url('${url}')">
+      <button class="add-loc-thumb-rm" data-i="${i}">&times;</button>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.add-loc-thumb-rm').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      addLocPhotos.splice(parseInt(btn.dataset.i), 1);
+      renderAddLocPreviews();
+    });
+  });
+}
+
+document.getElementById('add-loc-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const msgEl  = document.getElementById('add-loc-msg');
+  const submit = document.getElementById('add-loc-submit');
+  const name      = document.getElementById('add-loc-name').value.trim();
+  const siteType  = document.getElementById('add-loc-type').value;
+  const address   = document.getElementById('add-loc-address').value.trim();
+  const isOutdoor = document.getElementById('add-loc-outdoor').checked;
+  const notes     = document.getElementById('add-loc-notes').value.trim() || null;
+  const venueTypes = [...document.querySelectorAll('input[name="add-loc-venue"]:checked')].map(el => el.value);
+
+  if (!name)             { showMsg(msgEl,'Name is required.',true); return; }
+  if (!siteType)         { showMsg(msgEl,'Select a site type.',true); return; }
+  if (!address)          { showMsg(msgEl,'Address is required.',true); return; }
+  if (!venueTypes.length){ showMsg(msgEl,'Select at least one venue type.',true); return; }
+  if (!isOutdoor)        { showMsg(msgEl,'Only outdoor locations can be added here. For indoor, create a run and add the location there.',true); return; }
+  if (!addLocPhotos.length){ showMsg(msgEl,'At least one photo is required.',true); return; }
+
+  // Geocode address via Nominatim if no GPS coords
+  if (!addLocLat && address) {
+    try {
+      const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address+', Montgomery County, MD')}&format=json&limit=1`);
+      const json = await res.json();
+      if (json[0]) { addLocLat = parseFloat(json[0].lat); addLocLon = parseFloat(json[0].lon); }
+    } catch {}
+  }
+
+  submit.disabled = true; submit.textContent = 'Uploading photos...';
+
+  // Upload photos
+  const photoUrls = [];
+  for (const file of addLocPhotos) {
+    const ext  = file.name.split('.').pop();
+    const path = `loc-submissions/${currentProfile.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: upErr } = await sb.storage.from('media').upload(path, file);
+    if (!upErr) photoUrls.push(sb.storage.from('media').getPublicUrl(path).data.publicUrl);
+  }
+
+  submit.textContent = 'Submitting...';
+  const { error } = await sb.from('location_submission').insert({
+    submitted_by:  currentProfile.id,
+    name, site_type: siteType, address,
+    lat:          addLocLat, lon: addLocLon,
+    venue_types:  venueTypes,
+    is_outdoor:   true,
+    notes,
+    photo_urls:   photoUrls,
+    status:       'pending',
+  });
+
+  submit.disabled = false; submit.textContent = 'Submit Location';
+  if (error) { showMsg(msgEl, error.message, true); }
+  else {
+    document.getElementById('add-location-modal').classList.add('hidden');
+    showBanner('Thanks! We\'ll review and add your location soon.', false);
+  }
+});
 
 function jumpToCreateRun(locId) {
   document.querySelector('[data-section="create"]')?.click();

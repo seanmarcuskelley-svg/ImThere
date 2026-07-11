@@ -51,19 +51,25 @@
         <h1>Courts near you</h1>
         <p id="location-status">Detecting location...</p>
       </div>
-      <button class="filter-toggle-btn" id="filter-toggle">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        Filter
-      </button>
+      <div class="courts-header-btns">
+        <button class="filter-toggle-btn" id="add-location-btn">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add
+        </button>
+        <button class="filter-toggle-btn" id="filter-toggle">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filter
+        </button>
+      </div>
     </div>
 
     <div id="filter-panel" class="filter-panel hidden">
       <div class="filter-section">
         <label class="filter-label">Venue type</label>
         <div class="filter-checks">
-          <label class="check-opt"><input type="checkbox" name="venue" value="basketball" checked> Basketball Courts</label>
+          <label class="check-opt"><input type="checkbox" name="venue" value="basketball" checked> Courts (Basketball)</label>
           <label class="check-opt"><input type="checkbox" name="venue" value="field" checked> Fields</label>
-          <label class="check-opt"><input type="checkbox" name="venue" value="tennis_pickleball" checked> Tennis / Pickleball</label>
+          <label class="check-opt"><input type="checkbox" name="venue" value="tennis_pickleball" checked> Tennis Courts</label>
         </div>
       </div>
       <div class="filter-section" id="distance-filter-section">
@@ -526,6 +532,75 @@
       <div class="story-viewer-author" id="story-viewer-author"></div>
       <div id="story-viewer-body"></div>
     </div>
+  </div>
+</div>
+
+<!-- ===== ADD LOCATION MODAL ===== -->
+<div id="add-location-modal" class="modal-overlay hidden">
+  <div class="modal-box modal-box-tall">
+    <button id="add-loc-close" class="modal-close">&times;</button>
+    <h2 class="modal-title">Add a Location</h2>
+    <p class="modal-subtitle">Know a court or field that's missing? Submit it for review.</p>
+
+    <form id="add-loc-form">
+      <div class="form-group">
+        <label>Site type</label>
+        <select id="add-loc-type" required>
+          <option value="">Select type...</option>
+          <option>Park</option>
+          <option>High School</option>
+          <option>Middle School</option>
+          <option>Elementary School</option>
+          <option>Community Center</option>
+          <option>Recreation Center</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Location name</label>
+        <input type="text" id="add-loc-name" placeholder="e.g. White Flint Park" required>
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <input type="text" id="add-loc-address" placeholder="Street address or intersection" required>
+        <button type="button" id="add-loc-use-location" class="use-location-btn">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          Use my location
+        </button>
+        <span id="add-loc-coords" class="field-note"></span>
+      </div>
+      <div class="form-group">
+        <label>What's there? <span class="optional">(check all that apply)</span></label>
+        <div class="filter-checks" style="margin-top:6px">
+          <label class="check-opt"><input type="checkbox" name="add-loc-venue" value="basketball"> Courts (Basketball)</label>
+          <label class="check-opt"><input type="checkbox" name="add-loc-venue" value="tennis_pickleball"> Tennis Courts</label>
+          <label class="check-opt"><input type="checkbox" name="add-loc-venue" value="field"> Fields</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="check-opt" style="font-size:.85rem;text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-1)">
+          <input type="checkbox" id="add-loc-outdoor" style="width:18px;height:18px;accent-color:var(--brand)">
+          This is an outdoor location <span class="optional">(indoor locations can't be added here)</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Photos <span class="optional">(at least 1 required — helps us verify)</span></label>
+        <div class="add-loc-photo-upload">
+          <label for="add-loc-photos" class="add-loc-photo-label">
+            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Tap to add photos</span>
+          </label>
+          <input type="file" id="add-loc-photos" accept="image/*" multiple style="display:none">
+        </div>
+        <div id="add-loc-photo-preview" class="add-loc-photo-strip"></div>
+      </div>
+      <div class="form-group">
+        <label>Notes <span class="optional">(optional)</span></label>
+        <textarea id="add-loc-notes" rows="2" placeholder="Parking info, hours, any other details..."></textarea>
+      </div>
+      <p id="add-loc-msg" class="form-msg hidden"></p>
+      <button type="submit" class="submit-btn" id="add-loc-submit">Submit Location</button>
+    </form>
   </div>
 </div>
 
